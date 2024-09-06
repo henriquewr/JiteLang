@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using JiteLang.Main.LangParser.Types;
 
-namespace JiteLang.Main.LangParser
+namespace JiteLang.Main.AsmBuilder
 {
     internal class Scope
     {
@@ -13,7 +13,7 @@ namespace JiteLang.Main.LangParser
             BytesAllocated = bytesAllocated;
         }
 
-        public Scope(Scope parent) : this(parent, new Dictionary<string, Variable>(), 0) 
+        public Scope(Scope parent) : this(parent, new Dictionary<string, Variable>(), 0)
         {
         }
 

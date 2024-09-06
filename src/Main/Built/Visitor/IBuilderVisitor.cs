@@ -2,11 +2,11 @@
 using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 using JiteLang.Main.LangParser.SyntaxTree;
-using JiteLang.Main.LangParser;
 using JiteLang.Main.Builder.Instructions;
 using JiteLang.Main.Built.Statements.Declaration;
 using JiteLang.Main.Built.Expressions;
 using JiteLang.Main.Builder;
+using JiteLang.Main.AsmBuilder;
 
 namespace JiteLang.Main.Built.Visitor
 {

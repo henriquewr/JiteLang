@@ -1,15 +1,13 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using JiteLang.Main.AsmBuilder.Visitor;
 using JiteLang.Main.Builder.AsmBuilder;
 using JiteLang.Main.Builder.Instructions;
 using JiteLang.Main.Emit;
 using JiteLang.Main.LangLexer;
 using JiteLang.Main.LangParser;
+using JiteLang.Main.AsmBuilder;
 
 namespace JiteLang
 {
@@ -22,31 +20,24 @@ namespace JiteLang
         {
             class AlgumaCoisa
             {
-                public string Main()
+                public int Main()
                 {
-                    string a = "bcdefghi";
-                    return a;
+                    return Galo(10000);
+                }
+
+                public int Galo(int galo)
+                {
+                    if(galo == 0)
+                    {
+                        return 3;
+                    }
+
+                    return Galo(galo - 1);
                 }
             }
         }
         """
             ;
-
-            //var sw = Stopwatch.StartNew();
-
-            //main2();
-            //int main2()
-            //{
-            //    int i = 0;
-
-            //    while (i != 1000000)
-            //    {
-            //        ++i;
-            //    }
-            //    return i;
-            //}
-
-            //sw.Stop();
 
             Compile(text);
         }
@@ -72,12 +63,11 @@ namespace JiteLang
             //var visitor2 = new BuilderVisitor();
             //var builtNamespace = visitor2.VisitNamespaceDeclaration(parsed.Root, context);
 
-            var globalScope = Scope.CreateGlobal();
             var asmBuilder = new AssemblyBuilder();
             var asmBuilderAbstractions = new AssemblyBuilderAbstractions(asmBuilder);
             var asmBuilderVisitor = new AsmBuilderVisitor(asmBuilder, asmBuilderAbstractions);
-            var intructions = asmBuilderVisitor.VisitNamespaceDeclaration(parsed.Root, globalScope);
-            var optimized =  Optimize(intructions);
+            var intructions = asmBuilderVisitor.VisitNamespaceDeclaration(parsed.Root, Scope.CreateGlobal());
+            var optimized = Optimize(intructions);
 
 
 

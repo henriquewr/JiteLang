@@ -54,6 +54,7 @@ namespace JiteLang.Main.Emit
                         case AsmInstructionType.Or:
                             Or(left.Value, right.Value);
                             break;
+
                         case AsmInstructionType.And:
                             And(left.Value, right.Value);
                             break;      
@@ -61,6 +62,7 @@ namespace JiteLang.Main.Emit
                         case AsmInstructionType.Cmp:
                             Cmp(left.Value, right.Value);
                             break;
+
                         case AsmInstructionType.Test:
                             Test(left.Value, right.Value);
                             break;
