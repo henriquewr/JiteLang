@@ -7,7 +7,9 @@ using JiteLang.Main.Builder.Instructions;
 using JiteLang.Main.Emit;
 using JiteLang.Main.LangLexer;
 using JiteLang.Main.LangParser;
-using JiteLang.Main.AsmBuilder;
+using JiteLang.Main.Visitor.Type;
+using JiteLang.Main.Visitor.Type.Scope;
+using JiteLang.Main.AsmBuilder.Scope;
 
 namespace JiteLang
 {
@@ -20,20 +22,17 @@ namespace JiteLang
         {
             class AlgumaCoisa
             {
-                public int Main()
+                public string Teste(int a, long b)
                 {
-                    return Galo(10000);
+                    return "galo2";
                 }
 
-                public int Galo(int galo)
+                public string Main()
                 {
-                    if(galo == 0)
-                    {
-                        return 3;
-                    }
-
-                    return Galo(galo - 1);
+                    return Teste(1, "");
                 }
+
+              
             }
         }
         """
@@ -50,14 +49,17 @@ namespace JiteLang
             var parser = new Parser(lexed);
             var parsed = parser.Parse();
 
+            var jsonTeste = JsonConvert.SerializeObject(parsed.Root);
+
+            new TypeVisitor(parsed.Errors).VisitNamespaceDeclaration(parsed.Root, TypeScope.CreateGlobal());
+
             foreach (var error in parsed.Errors)
-            { 
+            {
                 Console.WriteLine(error);
             }
 
-            var jsonTeste = JsonConvert.SerializeObject(parsed.Root);
 
-            //var typeChecker = new TypeCheckerVisitor(new TypeVisitor(new SyntaxVisitor()));
+            //var typeChecker = new TypeCheckerVisitor(new TypeVisitor());
             //typeChecker.CheckNamespaceDeclaration(parsed.Root);
 
             //var visitor2 = new BuilderVisitor();
@@ -66,7 +68,8 @@ namespace JiteLang
             var asmBuilder = new AssemblyBuilder();
             var asmBuilderAbstractions = new AssemblyBuilderAbstractions(asmBuilder);
             var asmBuilderVisitor = new AsmBuilderVisitor(asmBuilder, asmBuilderAbstractions);
-            var intructions = asmBuilderVisitor.VisitNamespaceDeclaration(parsed.Root, Scope.CreateGlobal());
+            var intructions = asmBuilderVisitor.VisitNamespaceDeclaration(parsed.Root, CodeScope.CreateGlobal());
+
             var optimized = Optimize(intructions);
 
 

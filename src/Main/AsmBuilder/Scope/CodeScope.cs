@@ -1,33 +1,43 @@
-﻿using System;
+﻿using JiteLang.Main.LangParser.Types;
+using JiteLang.Main.Shared;
+using System;
 using System.Collections.Generic;
-using JiteLang.Main.LangParser.Types;
 
-namespace JiteLang.Main.AsmBuilder
+namespace JiteLang.Main.AsmBuilder.Scope
 {
-    internal class Scope
+    internal class CodeScope : IScope<string, CodeVariable, string, CodeMethod, CodeScope>
     {
-        public Scope(Scope parent, Dictionary<string, Variable> variables, int bytesAllocated)
+        public CodeScope(CodeScope parent,
+            Dictionary<string, CodeVariable> variables,
+            Dictionary<string, CodeMethod> methods,
+            int bytesAllocated)
         {
             Parent = parent;
             Variables = variables;
+            Methods = methods;
             BytesAllocated = bytesAllocated;
         }
-
-        public Scope(Scope parent) : this(parent, new Dictionary<string, Variable>(), 0)
+        public CodeScope(CodeScope parent, int bytesAllocated) : this(parent,
+            new(),
+            new(),
+            bytesAllocated)
+        {
+        }
+        public CodeScope(CodeScope parent) : this(parent,
+            new(),
+            new(),
+            0)
         {
         }
 
-        public Scope(Scope parent, int bytesAllocated) : this(parent, new Dictionary<string, Variable>(), bytesAllocated)
-        {
-        }
+        public Dictionary<string, CodeVariable> Variables { get; set; }
+        public Dictionary<string, CodeMethod> Methods { get; set; }
+        public CodeScope? Parent { get; set; }
 
-        public static Scope CreateGlobal()
+        public static CodeScope CreateGlobal()
         {
-            return new Scope(null!);
+            return new CodeScope(null!);
         }
-
-        public Scope? Parent { get; set; }
-        public Dictionary<string, Variable> Variables { get; set; }
 
         public bool HasStackFrame { get; set; }
         public int BytesAllocated { get; init; }
@@ -64,12 +74,29 @@ namespace JiteLang.Main.AsmBuilder
             return strPos;
         }
 
-        public Variable GetVariable(string key)
+        public CodeMethod GetMethod(string key)
+        {
+            var currentContext = this;
+
+            while (currentContext != null)
+            {
+                if (currentContext.Methods.TryGetValue(key, out var method))
+                {
+                    return method;
+                }
+
+                currentContext = currentContext.Parent;
+            }
+
+            throw new KeyNotFoundException($"Method '{key}' not found in the current or parent scopes.");
+        }
+
+        public CodeVariable GetVariable(string key)
         {
             return GetVariable(key, out _);
         }
 
-        public Variable GetVariable(string key, out int stackOffsetToVariable)
+        public CodeVariable GetVariable(string key, out int stackOffsetToVariable)
         {
             const int PushRbpLength = 8;
 
@@ -104,7 +131,7 @@ namespace JiteLang.Main.AsmBuilder
 
             throw new KeyNotFoundException($"Variable '{key}' not found in the current or parent scopes.");
 
-            void EatScopeWithoutStackFrame(ref Scope? scope)
+            void EatScopeWithoutStackFrame(ref CodeScope? scope)
             {
                 while (scope?.Parent is not null && scope.HasStackFrame == false)
                 {
@@ -118,7 +145,7 @@ namespace JiteLang.Main.AsmBuilder
             }
         }
 
-        public Variable AddVariable(string key, TypeSyntax type, bool isPositiveStackLocation)
+        public CodeVariable AddVariable(string key, TypeSyntax type, bool isPositiveStackLocation)
         {
             int stackLocation;
             if (isPositiveStackLocation)
@@ -132,31 +159,20 @@ namespace JiteLang.Main.AsmBuilder
                 stackLocation = DownStackPosition;
             }
 
-            var variable = new Variable(stackLocation, type, isPositiveStackLocation);
+            var variable = new CodeVariable(stackLocation, type, isPositiveStackLocation);
 
             Variables.Add(key, variable);
 
             return variable;
         }
 
-        public sealed class Variable
+        public CodeMethod AddMethod(string key, TypeSyntax type, Dictionary<string, CodeMethodParameter> @params)
         {
-            public Variable(int stackLocation, TypeSyntax type)
-            {
-                InScopeStackLocation = stackLocation;
-                Type = type;
-            }
+            var method = new CodeMethod(type, @params);
 
-            public Variable(int stackLocation, TypeSyntax type, bool stackLocationIsPositive)
-            {
-                InScopeStackLocation = stackLocation;
-                Type = type;
-                StackLocationIsPositive = stackLocationIsPositive;
-            }
+            Methods.Add(key, method);
 
-            public bool StackLocationIsPositive { get; set; }
-            public int InScopeStackLocation { get; set; }
-            public TypeSyntax Type { get; set; }
+            return method;
         }
     }
 }

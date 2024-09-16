@@ -12,6 +12,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
         public LiteralExpressionSyntax(SyntaxToken value) 
         {
             Value = value;
+            Position = value.Position;
         }
 
         public override SyntaxKind Kind => SyntaxKind.LiteralExpression;

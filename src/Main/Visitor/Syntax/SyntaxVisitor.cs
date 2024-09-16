@@ -1,15 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using JiteLang.Main.AsmBuilder;
+using JiteLang.Main.AsmBuilder.Scope;
 using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 using JiteLang.Main.LangParser.SyntaxTree;
+using JiteLang.Main.Shared;
 using JiteLang.Syntax;
 
 namespace JiteLang.Main.Visitor.Syntax
 {
-    internal class SyntaxVisitor : ISyntaxVisitor<IList<SyntaxNode>,
+    internal class SyntaxVisitor<TScope> : ISyntaxVisitor<IList<SyntaxNode>,
         ClassDeclarationSyntax, 
         MethodDeclarationSyntax, 
         VariableDeclarationSyntax, 
@@ -17,13 +18,16 @@ namespace JiteLang.Main.Visitor.Syntax
         ExpressionSyntax, 
         StatementSyntax,
         LiteralExpressionSyntax,
-        ParameterDeclarationSyntax>
+        ParameterDeclarationSyntax, 
+        CodeScope>
     {
         public SyntaxVisitor()
         {
         }
 
-        public virtual IList<SyntaxNode> VisitNamespaceDeclaration(NamespaceDeclarationSyntax root, Scope context)
+
+        #region Declarations
+        public virtual IList<SyntaxNode> VisitNamespaceDeclaration(NamespaceDeclarationSyntax root, CodeScope context)
         {
             var newNodes = new List<SyntaxNode>();
 
@@ -35,11 +39,11 @@ namespace JiteLang.Main.Visitor.Syntax
             return newNodes;
         }
 
-        public virtual ClassDeclarationSyntax VisitClassDeclaration(ClassDeclarationSyntax classDeclaration, Scope context)
+        public virtual ClassDeclarationSyntax VisitClassDeclaration(ClassDeclarationSyntax classDeclaration, CodeScope context)
         {
             var newNodes = new List<SyntaxNode>();
 
-            var newContext = new Scope(context);
+            var newContext = new CodeScope(context);
 
             foreach (var item in classDeclaration.Body.Members)
             {
@@ -64,9 +68,9 @@ namespace JiteLang.Main.Visitor.Syntax
             return classDeclaration;
         }
 
-        public virtual MethodDeclarationSyntax VisitMethodDeclaration(MethodDeclarationSyntax methodDeclarationSyntax, Scope context)
+        public virtual MethodDeclarationSyntax VisitMethodDeclaration(MethodDeclarationSyntax methodDeclarationSyntax, CodeScope context)
         {
-            var newContext = new Scope(context);
+            var newContext = new CodeScope(context);
 
             var newParameters = new List<ParameterDeclarationSyntax>();
             foreach (var item in methodDeclarationSyntax.Params)
@@ -101,13 +105,12 @@ namespace JiteLang.Main.Visitor.Syntax
             return methodDeclarationSyntax;
         }
 
-
-        public ParameterDeclarationSyntax VisitMethodParameter(ParameterDeclarationSyntax parameterDeclarationSyntax, Scope context)
+        public virtual ParameterDeclarationSyntax VisitMethodParameter(ParameterDeclarationSyntax parameterDeclarationSyntax, CodeScope context)
         {
             return parameterDeclarationSyntax;
         }
 
-        public virtual VariableDeclarationSyntax VisitVariableDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, Scope context)
+        public virtual VariableDeclarationSyntax VisitVariableDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, CodeScope context)
         {
             if (variableDeclarationSyntax.InitialValue is not null)
             {
@@ -116,8 +119,20 @@ namespace JiteLang.Main.Visitor.Syntax
 
             return variableDeclarationSyntax;
         }
+        #endregion Declarations
 
-        public StatementSyntax VisitReturnStatement(ReturnStatementSyntax returnStatementSyntax, Scope context)
+        #region Statements
+        public virtual StatementSyntax VisitElseStatement(StatementSyntax elseStatementSyntax, CodeScope scope)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public virtual StatementSyntax VisitWhileStatement(WhileStatementSyntax whileStatementSyntax, CodeScope scope)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public virtual StatementSyntax VisitReturnStatement(ReturnStatementSyntax returnStatementSyntax, CodeScope context)
         {
             if (returnStatementSyntax.ReturnValue is not null)
             {
@@ -127,11 +142,11 @@ namespace JiteLang.Main.Visitor.Syntax
             return returnStatementSyntax;
         }
 
-        public StatementSyntax VisitIfStatement(IfStatementSyntax ifStatementSyntax, Scope context)
+        public virtual StatementSyntax VisitIfStatement(IfStatementSyntax ifStatementSyntax, CodeScope context)
         {
             ifStatementSyntax.Condition = VisitExpression(ifStatementSyntax.Condition, context);
 
-            var newContext = new Scope(context);
+            var newContext = new CodeScope(context);
 
             var newNodes = new List<SyntaxNode>();
             foreach (var item in ifStatementSyntax.Body.Members)
@@ -158,15 +173,17 @@ namespace JiteLang.Main.Visitor.Syntax
 
             return ifStatementSyntax;
         }
+        #endregion Statements
 
-        public virtual AssignmentExpressionSyntax VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpressionSyntax, Scope context)
+        #region Expressions
+        public virtual AssignmentExpressionSyntax VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpressionSyntax, CodeScope context)
         {
             assignmentExpressionSyntax.Right = VisitExpression(assignmentExpressionSyntax.Right, context);
             assignmentExpressionSyntax.Left = VisitExpression(assignmentExpressionSyntax.Left, context);
             return assignmentExpressionSyntax;
         }
 
-        public virtual ExpressionSyntax VisitExpression(ExpressionSyntax expressionSyntax, Scope context)
+        public virtual ExpressionSyntax VisitExpression(ExpressionSyntax expressionSyntax, CodeScope context)
         {
             switch (expressionSyntax.Kind)
             {
@@ -191,29 +208,29 @@ namespace JiteLang.Main.Visitor.Syntax
             }
         }
 
-        public virtual LiteralExpressionSyntax VisitLiteralExpression(LiteralExpressionSyntax literalExpressionSyntax, Scope context)
+        public virtual LiteralExpressionSyntax VisitLiteralExpression(LiteralExpressionSyntax literalExpressionSyntax, CodeScope context)
         {
             return literalExpressionSyntax;
         }
 
-        public virtual ExpressionSyntax VisitMemberExpression(MemberExpressionSyntax memberExpressionSyntax, Scope context)
+        public virtual ExpressionSyntax VisitMemberExpression(MemberExpressionSyntax memberExpressionSyntax, CodeScope context)
         {
             return VisitExpression(memberExpressionSyntax, context);
         }
 
-        public virtual ExpressionSyntax VisitUnaryExpression(UnaryExpressionSyntax unaryExpressionSyntax, Scope context)
+        public virtual ExpressionSyntax VisitUnaryExpression(UnaryExpressionSyntax unaryExpressionSyntax, CodeScope context)
         {
             return VisitExpression(unaryExpressionSyntax, context);
         }
           
-        public virtual ExpressionSyntax VisitCastExpression(CastExpressionSyntax castExpressionSyntax, Scope context)
+        public virtual ExpressionSyntax VisitCastExpression(CastExpressionSyntax castExpressionSyntax, CodeScope context)
         {
             castExpressionSyntax.Value = VisitExpression(castExpressionSyntax.Value, context);
 
             return castExpressionSyntax;
         }
 
-        public virtual ExpressionSyntax VisitBinaryExpression(BinaryExpressionSyntax binaryExpressionSyntax, Scope context)
+        public virtual ExpressionSyntax VisitBinaryExpression(BinaryExpressionSyntax binaryExpressionSyntax, CodeScope context)
         {
             binaryExpressionSyntax.Left = VisitExpression(binaryExpressionSyntax.Left, context);
             binaryExpressionSyntax.Right = VisitExpression(binaryExpressionSyntax.Right, context);
@@ -221,7 +238,7 @@ namespace JiteLang.Main.Visitor.Syntax
             return binaryExpressionSyntax;
         }
 
-        public virtual ExpressionSyntax VisitLogicalExpression(LogicalExpressionSyntax logicalExpressionSyntax, Scope context)
+        public virtual ExpressionSyntax VisitLogicalExpression(LogicalExpressionSyntax logicalExpressionSyntax, CodeScope context)
         {
             logicalExpressionSyntax.Left = VisitExpression(logicalExpressionSyntax.Left, context);
             logicalExpressionSyntax.Right = VisitExpression(logicalExpressionSyntax.Right, context);
@@ -229,14 +246,15 @@ namespace JiteLang.Main.Visitor.Syntax
             return logicalExpressionSyntax;
         }
 
-        public virtual ExpressionSyntax VisitIdentifierExpression(IdentifierExpressionSyntax identifierExpressionSyntax, Scope context)
+        public virtual ExpressionSyntax VisitIdentifierExpression(IdentifierExpressionSyntax identifierExpressionSyntax, CodeScope context)
         {
             return identifierExpressionSyntax;
         }
 
-        public ExpressionSyntax VisitCallExpression(CallExpressionSyntax callExpressionSyntax, Scope context)
+        public virtual ExpressionSyntax VisitCallExpression(CallExpressionSyntax callExpressionSyntax, CodeScope context)
         {
             return callExpressionSyntax;
         }
+        #endregion Expressions
     }
 }

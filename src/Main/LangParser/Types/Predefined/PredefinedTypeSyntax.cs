@@ -10,12 +10,13 @@ namespace JiteLang.Main.LangParser.Types.Predefined
 {
     internal class PredefinedTypeSyntax : TypeSyntax
     {
+        public override bool IsPreDefined => true;
+
         public PredefinedTypeSyntax(SyntaxToken keyword) 
         {
             Keyword = keyword;
         }
 
         public SyntaxToken Keyword { get; set; }
-        public override bool IsPreDefined => true;
     }
 }
