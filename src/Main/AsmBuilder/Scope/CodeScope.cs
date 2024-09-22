@@ -1,5 +1,4 @@
 ﻿using JiteLang.Main.Bound;
-using JiteLang.Main.LangParser.Types;
 using JiteLang.Main.Shared;
 using System;
 using System.Collections.Generic;
@@ -73,6 +72,13 @@ namespace JiteLang.Main.AsmBuilder.Scope
             var sign = offset >= 0 ? '+' : '-';
             var strPos = $"[rbp {sign} {Math.Abs(offset)}]";
             return strPos;
+        }
+
+        public string GetSizedRbpPosStr(string key)
+        {
+            var pos = GetRbpPosStr(key);
+            var sizedPos = $"qword {pos}"; // TODO qword is not always the right size
+            return sizedPos;
         }
 
         public CodeMethod GetMethod(string key)

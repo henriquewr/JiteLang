@@ -24,5 +24,10 @@ namespace JiteLang.Main.Builder.Operands
         }
 
         public string Value { get; set; }
+
+        public static Operand Rax => new Operand("rax");
+        public static Operand Rbx => new Operand("rbx");
+        public static Operand Rcx => new Operand("rcx");
+        public static Operand Rdx => new Operand("rdx");
     }
 }
