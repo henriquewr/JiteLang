@@ -29,6 +29,7 @@ namespace Teste
             while(test <= 200)
             {
                 test = test + 1;
+                return test;
             }
 
             return test;
