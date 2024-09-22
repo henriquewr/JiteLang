@@ -12,7 +12,7 @@ namespace JiteLang.Main.LangParser.Types.Predefined
     {
         public override bool IsPreDefined => true;
 
-        public PredefinedTypeSyntax(SyntaxToken keyword) 
+        public PredefinedTypeSyntax(SyntaxToken keyword) : base(keyword.Text)
         {
             Keyword = keyword;
         }

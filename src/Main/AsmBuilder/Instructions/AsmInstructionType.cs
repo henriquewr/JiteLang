@@ -33,6 +33,10 @@ namespace JiteLang.Main.Builder.Instructions
         Jmp,
         Sete,
         Setne,
+        Setle,
+        Setl,
+        Setge,
+        Setg,
 
         Syscall,
         Cqo,

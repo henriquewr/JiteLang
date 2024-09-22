@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using JiteLang.Main.AsmBuilder.Visitor;
 using JiteLang.Main.Builder.AsmBuilder;
@@ -10,6 +9,7 @@ using JiteLang.Main.LangParser;
 using JiteLang.Main.Visitor.Type;
 using JiteLang.Main.Visitor.Type.Scope;
 using JiteLang.Main.AsmBuilder.Scope;
+using JiteLang.Main.Bound;
 
 namespace JiteLang
 {
@@ -18,25 +18,24 @@ namespace JiteLang
         static void Main(string[] args)
         {
             var text = """
-        namespace Teste
+namespace Teste
+{
+    class AlgumaCoisa
+    {
+        public int Main()
         {
-            class AlgumaCoisa
+            int test = 1;
+
+            while(test <= 200)
             {
-                public string Teste(int a, long b)
-                {
-                    return "galo2";
-                }
-
-                public string Main()
-                {
-                    return Teste(1, "");
-                }
-
-              
+                test = test + 1;
             }
+
+            return test;
         }
-        """
-            ;
+    }
+}
+""";
 
             Compile(text);
         }
@@ -49,37 +48,35 @@ namespace JiteLang
             var parser = new Parser(lexed);
             var parsed = parser.Parse();
 
-            var jsonTeste = JsonConvert.SerializeObject(parsed.Root);
+            var jsonTeste = Newtonsoft.Json.JsonConvert.SerializeObject(parsed.Root);
 
-            new TypeVisitor(parsed.Errors).VisitNamespaceDeclaration(parsed.Root, TypeScope.CreateGlobal());
+            var builtNamespace = new Binder().BindNamespaceDeclaration(parsed.Root);
+            var boundTree = new BoundSyntaxTree(builtNamespace, parsed.Errors);
 
-            foreach (var error in parsed.Errors)
+            new TypeVisitor(boundTree.Errors).VisitNamespaceDeclaration(boundTree.Root, TypeScope.CreateGlobal());
+
+            foreach (var error in boundTree.Errors)
             {
                 Console.WriteLine(error);
             }
 
-
-            //var typeChecker = new TypeCheckerVisitor(new TypeVisitor());
-            //typeChecker.CheckNamespaceDeclaration(parsed.Root);
-
-            //var visitor2 = new BuilderVisitor();
-            //var builtNamespace = visitor2.VisitNamespaceDeclaration(parsed.Root, context);
+            if (boundTree.HasErrors)
+            {
+                return;
+            }
 
             var asmBuilder = new AssemblyBuilder();
             var asmBuilderAbstractions = new AssemblyBuilderAbstractions(asmBuilder);
             var asmBuilderVisitor = new AsmBuilderVisitor(asmBuilder, asmBuilderAbstractions);
-            var intructions = asmBuilderVisitor.VisitNamespaceDeclaration(parsed.Root, CodeScope.CreateGlobal());
+            var intructions = asmBuilderVisitor.VisitNamespaceDeclaration(builtNamespace, CodeScope.CreateGlobal());
 
             var optimized = Optimize(intructions);
-
-
-
 
             var asmEmiter = new AssemblyEmiter(Console.Out);
             asmEmiter.EmitInstructions(optimized);
         }
 
-        static IList<Instruction> Optimize(IList<Instruction> instructions)
+        static List<Instruction> Optimize(IList<Instruction> instructions)
         {
             var optmiziedInstuctions = new List<Instruction>();
 

@@ -1,15 +1,10 @@
-﻿using JiteLang.Main.CodeAnalysis.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using JiteLang.Main.Bound;
 
 namespace JiteLang.Main.Visitor.Type.Scope
 {
     internal class TypeMethodParameter : TypeVariable
     {
-        public TypeMethodParameter(LangType varType) : base(varType)
+        public TypeMethodParameter(TypeSymbol varType) : base(varType)
         {
         }
     }

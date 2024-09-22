@@ -1,4 +1,5 @@
-﻿using JiteLang.Main.LangParser.Types;
+﻿using JiteLang.Main.Bound;
+using JiteLang.Main.LangParser.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,11 +10,11 @@ namespace JiteLang.Main.AsmBuilder.Scope
 {
     internal class CodeMethodParameter
     {
-        public CodeMethodParameter(TypeSyntax type)
+        public CodeMethodParameter(TypeSymbol type)
         {
             Type = type;
         }
 
-        public TypeSyntax Type { get; set; }
+        public TypeSymbol Type { get; set; }
     }
 }

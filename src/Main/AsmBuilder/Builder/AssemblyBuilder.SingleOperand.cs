@@ -73,5 +73,21 @@ namespace JiteLang.Main.Builder.AsmBuilder
         {
             return new SingleOperandInstruction(AsmInstructionType.Setne, operand);
         }
+        public SingleOperandInstruction Setle(Operand operand)
+        {
+            return new SingleOperandInstruction(AsmInstructionType.Setle, operand);
+        }  
+        public SingleOperandInstruction Setl(Operand operand)
+        {
+            return new SingleOperandInstruction(AsmInstructionType.Setl, operand);
+        }  
+        public SingleOperandInstruction Setge(Operand operand)
+        {
+            return new SingleOperandInstruction(AsmInstructionType.Setge, operand);
+        }   
+        public SingleOperandInstruction Setg(Operand operand)
+        {
+            return new SingleOperandInstruction(AsmInstructionType.Setg, operand);
+        }
     }
 }

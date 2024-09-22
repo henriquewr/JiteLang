@@ -123,6 +123,22 @@ namespace JiteLang.Main.Emit
                             Setne(operand.Value);
                             break;
 
+                        case AsmInstructionType.Setle:
+                            Setle(operand.Value);
+                            break;
+
+                        case AsmInstructionType.Setl:
+                            Setl(operand.Value);
+                            break;
+
+                        case AsmInstructionType.Setge:
+                            Setge(operand.Value);
+                            break;
+
+                        case AsmInstructionType.Setg:
+                            Setg(operand.Value);
+                            break;
+
                         default:
                             throw new UnreachableException();
                     }
@@ -154,107 +170,102 @@ namespace JiteLang.Main.Emit
             }
         }
 
-        public void Push(string pushTo)
-        {
-            _outputWriter.WriteLine($"    push {pushTo}");
-        }
-
-        public void Pop(string popTo)
-        {
-            _outputWriter.WriteLine($"    pop {popTo}");
-        }
-
+        #region DoubleOperand
         public void Add(string left, string right)
         {
             _outputWriter.WriteLine($"    add {left}, {right}");
-        }  
-        
+        }
         public void Sub(string left, string right)
         {
             _outputWriter.WriteLine($"    sub {left}, {right}");
         }
-
         public void IMul(string left, string right)
         {
             _outputWriter.WriteLine($"    imul {left}, {right}");
         }
-          
         public void And(string left, string right)
         {
             _outputWriter.WriteLine($"    and {left}, {right}");
-        } 
+        }
         public void Or(string left, string right)
         {
             _outputWriter.WriteLine($"    or {left}, {right}");
         }
-
-        public void Idiv(string operand)
-        {
-            _outputWriter.WriteLine($"    idiv {operand}");
-        }
-
-        public void Cqo()
-        {
-            _outputWriter.WriteLine("    cqo");
-        }
-        public void Leave()
-        {
-            _outputWriter.WriteLine("    leave");
-        }
-
-        public void Sete(string operand)
-        {
-            _outputWriter.WriteLine($"    sete {operand}");
-        }  
-        public void Setne(string operand)
-        {
-            _outputWriter.WriteLine($"    setne {operand}");
-        }
-
         public void Mov(string left, string right)
         {
             _outputWriter.WriteLine($"    mov {left}, {right}");
-        }    
+        }
         public void Movzx(string left, string right)
         {
             _outputWriter.WriteLine($"    movzx {left}, {right}");
         }
-
         public void Test(string left, string right)
         {
             _outputWriter.WriteLine($"    test {left}, {right}");
         }
-
         public void Cmp(string left, string right)
         {
             _outputWriter.WriteLine($"    cmp {left}, {right}");
-        }  
-        
+        }
         public void Lea(string left, string right)
         {
             _outputWriter.WriteLine($"    lea {left}, {right}");
         }
+        #endregion DoubleOperand
 
+        #region SingleOperand
+        public void Push(string pushTo)
+        {
+            _outputWriter.WriteLine($"    push {pushTo}");
+        }
+        public void Pop(string popTo)
+        {
+            _outputWriter.WriteLine($"    pop {popTo}");
+        }
+        public void Idiv(string operand)
+        {
+            _outputWriter.WriteLine($"    idiv {operand}");
+        }
+        public void Sete(string operand)
+        {
+            _outputWriter.WriteLine($"    sete {operand}");
+        }
+        public void Setne(string operand)
+        {
+            _outputWriter.WriteLine($"    setne {operand}");
+        }
+        public void Setg(string operand)
+        {
+            _outputWriter.WriteLine($"    setg {operand}");
+        }
+        public void Setge(string operand)
+        {
+            _outputWriter.WriteLine($"    setge {operand}");
+        }
+        public void Setl(string operand)
+        {
+            _outputWriter.WriteLine($"    setl {operand}");
+        }
+        public void Setle(string operand)
+        {
+            _outputWriter.WriteLine($"    setle {operand}");
+        }
         public void Label(string label)
         {
             _outputWriter.WriteLine($"{label}:");
-        }  
-        
+        }
         public void Section(string section)
         {
             _outputWriter.WriteLine($"section {section}");
         }
-
         public void Global(string name)
         {
             _outputWriter.WriteLine($"    global {name}");
-        }  
-        
+        }
         public void Call(string call)
         {
             _outputWriter.WriteLine($"    call {call}");
-        }   
-        
+        }
         public void Je(string name)
         {
             _outputWriter.WriteLine($"    je {name}");
@@ -263,12 +274,10 @@ namespace JiteLang.Main.Emit
         {
             _outputWriter.WriteLine($"    jne {name}");
         }
-            
         public void Jmp(string name)
         {
             _outputWriter.WriteLine($"    jmp {name}");
         }
-
         public void Ret(string value)
         {
             if (string.IsNullOrEmpty(value) || value == "0")
@@ -279,11 +288,22 @@ namespace JiteLang.Main.Emit
             {
                 _outputWriter.WriteLine($"    ret {value}");
             }
-        }    
-        
+        }
+        #endregion SingleOperand
+
+        #region NoOperand
+        public void Cqo()
+        {
+            _outputWriter.WriteLine("    cqo");
+        }
+        public void Leave()
+        {
+            _outputWriter.WriteLine("    leave");
+        }
         public void Syscall()
         {
             _outputWriter.WriteLine("    syscall");
         }
+        #endregion NoOperand
     }
 }

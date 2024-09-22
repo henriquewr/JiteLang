@@ -17,6 +17,6 @@ namespace JiteLang.Main.LangParser.SyntaxTree
         public NamespaceDeclarationSyntax Root { get; set; }
 
         public bool HasErrors => Errors.Count > 0;
-        public IList<string> Errors { get; set; }
+        public List<string> Errors { get; set; }
     }
 }

@@ -1,4 +1,5 @@
-﻿using JiteLang.Main.LangParser.Types;
+﻿using JiteLang.Main.Bound;
+using JiteLang.Main.LangParser.Types;
 using JiteLang.Main.Shared;
 using System;
 using System.Collections.Generic;
@@ -145,7 +146,7 @@ namespace JiteLang.Main.AsmBuilder.Scope
             }
         }
 
-        public CodeVariable AddVariable(string key, TypeSyntax type, bool isPositiveStackLocation)
+        public CodeVariable AddVariable(string key, TypeSymbol type, bool isPositiveStackLocation)
         {
             int stackLocation;
             if (isPositiveStackLocation)
@@ -166,7 +167,7 @@ namespace JiteLang.Main.AsmBuilder.Scope
             return variable;
         }
 
-        public CodeMethod AddMethod(string key, TypeSyntax type, Dictionary<string, CodeMethodParameter> @params)
+        public CodeMethod AddMethod(string key, TypeSymbol type, Dictionary<string, CodeMethodParameter> @params)
         {
             var method = new CodeMethod(type, @params);
 

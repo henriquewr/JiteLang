@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 using JiteLang.Main.Builder.Instructions;
 using JiteLang.Main.Builder.Operands;
 
@@ -18,7 +15,7 @@ namespace JiteLang.Main.Builder.AsmBuilder
             _asmBuilder = asmBuilder;
         }
 
-        public IList<Instruction> String(string str)
+        public List<Instruction> String(string str)
         {
             //this function does not work for strange chars (alt + 1 for example)
 
@@ -57,7 +54,7 @@ namespace JiteLang.Main.Builder.AsmBuilder
             return instructions;
         }
 
-        public IList<Instruction> Exit(in Operand code)
+        public List<Instruction> Exit(in Operand code)
         {
             var instructions = new List<Instruction>
             {

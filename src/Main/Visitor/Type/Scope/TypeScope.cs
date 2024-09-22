@@ -1,6 +1,7 @@
-﻿using JiteLang.Main.CodeAnalysis.Types;
+﻿using JiteLang.Main.Bound;
 using JiteLang.Main.Shared;
 using System.Collections.Generic;
+
 namespace JiteLang.Main.Visitor.Type.Scope
 {
     internal class TypeScope : IScope<string, TypeVariable, string, TypeMethod, TypeScope>
@@ -55,7 +56,7 @@ namespace JiteLang.Main.Visitor.Type.Scope
             throw new KeyNotFoundException($"Method '{key}' not found in the current or parent scopes.");
         }
 
-        public TypeVariable AddVariable(string name, LangType type)
+        public TypeVariable AddVariable(string name, TypeSymbol type)
         {
             var variable = new TypeVariable(type);
 
@@ -64,7 +65,7 @@ namespace JiteLang.Main.Visitor.Type.Scope
             return variable;
         }
 
-        public TypeMethod AddMethod(string name, LangType returnType)
+        public TypeMethod AddMethod(string name, TypeSymbol returnType)
         {
             var method = new TypeMethod(returnType);
 
@@ -73,7 +74,7 @@ namespace JiteLang.Main.Visitor.Type.Scope
             return method;
         }
 
-        public TypeMethod AddMethod(string name, LangType returnType, Dictionary<string, TypeMethodParameter> @params)
+        public TypeMethod AddMethod(string name, TypeSymbol returnType, Dictionary<string, TypeMethodParameter> @params)
         {
             var method = new TypeMethod(returnType, @params);
 

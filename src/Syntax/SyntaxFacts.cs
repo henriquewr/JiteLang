@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.Tracing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using JiteLang.Main.LangParser.Types.Predefined;
-
+﻿
 namespace JiteLang.Syntax
 {
     internal static class SyntaxFacts
@@ -17,7 +10,7 @@ namespace JiteLang.Syntax
         public const string String = "string";
         public const string Bool = "bool";
         public const string Long = "long";
-        public const string Character = "char";
+        public const string Char = "char";
 
         public const string False = "false";
         public const string True = "true";
@@ -77,6 +70,7 @@ namespace JiteLang.Syntax
                     return false;
             }
         }
+
         public static bool IsPredefinedType(SyntaxKind keyword)
         {
             switch (keyword)
@@ -107,7 +101,7 @@ namespace JiteLang.Syntax
                     return SyntaxKind.IntKeyword;
                 case Long:
                     return SyntaxKind.LongKeyword;
-                case Character:
+                case Char:
                     return SyntaxKind.CharKeyword;
                 case String:
                     return SyntaxKind.StringKeyword;
@@ -181,7 +175,7 @@ namespace JiteLang.Syntax
                 case SyntaxKind.LongKeyword:
                     return Long;
                 case SyntaxKind.CharKeyword:
-                    return Character;
+                    return Char;
                 case SyntaxKind.StringKeyword:
                     return String;
                 case SyntaxKind.VoidKeyword:

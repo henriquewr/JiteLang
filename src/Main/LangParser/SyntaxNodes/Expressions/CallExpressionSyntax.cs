@@ -12,6 +12,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
         {
             Caller = caller;
             Args = args;
+            Position = caller.Position;
         }
 
         public CallExpressionSyntax(ExpressionSyntax caller)

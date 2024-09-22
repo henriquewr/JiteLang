@@ -2,26 +2,18 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.Sockets;
-using System.Reflection;
-using JiteLang.Main.Builder.Instructions;
-using JiteLang.Main.Builder.Operands;
-using JiteLang.Main.CodeAnalysis.Types;
-using JiteLang.Main.LangParser.SyntaxNodes;
-using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
-using JiteLang.Main.LangParser.SyntaxNodes.Statements;
-using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
-using JiteLang.Main.LangParser.SyntaxTree;
-using JiteLang.Main.LangParser.Types;
-using JiteLang.Main.LangParser.Types.Predefined;
-using JiteLang.Main.Shared;
-using JiteLang.Main.Visitor.Syntax;
+using JiteLang.Main.Builder;
+using JiteLang.Main.Bound;
+using JiteLang.Main.Bound.Expressions;
+using JiteLang.Main.Bound.Statements;
+using JiteLang.Main.Bound.Statements.Declaration;
 using JiteLang.Main.Visitor.Type.Scope;
 using JiteLang.Syntax;
+using JiteLang.Main.Bound.TypeResolvers;
 
 namespace JiteLang.Main.Visitor.Type
 {
-    internal class TypeVisitor// : ITypeVisitor
+    internal class TypeVisitor /*: ITypeVisitor*/
     {
         //protected readonly SyntaxVisitor _typeResolver;
 
@@ -36,38 +28,40 @@ namespace JiteLang.Main.Visitor.Type
             _diagnostics = diagnostics;
         }
 
+        private BoundMethodDeclaration? _currentMethod = null;
+
         private void AddError(string errorMessage, in SyntaxPosition position)
         {
             var errorText = $"{errorMessage}   On {position.GetPosText()}";
             _diagnostics.Add(errorText);
         }
 
-        private void VisitDefaultBlock(SyntaxNode item, TypeScope scope)
+        private void VisitDefaultBlock(BoundNode item, TypeScope scope)
         {
             switch (item.Kind)
             {
-                case SyntaxKind.VariableDeclaration:
-                    VisitVariableDeclaration((VariableDeclarationSyntax)item, scope);
+                case BoundKind.VariableDeclaration:
+                    VisitVariableDeclaration((BoundVariableDeclaration)item, scope);
                     break;
 
-                case SyntaxKind.CallExpression:
-                    VisitCallExpression((CallExpressionSyntax)item, scope);
+                case BoundKind.CallExpression:
+                    VisitCallExpression((BoundCallExpression)item, scope);
                     break;
 
-                case SyntaxKind.ReturnStatement:
-                    VisitReturnStatement((ReturnStatementSyntax)item, scope);
+                case BoundKind.ReturnStatement:
+                    VisitReturnStatement((BoundReturnStatement)item, scope);
                     break;
 
-                case SyntaxKind.IfStatement:
-                    VisitIfStatement((IfStatementSyntax)item, scope);
+                case BoundKind.IfStatement:
+                    VisitIfStatement((BoundIfStatement)item, scope);
                     break;
 
-                case SyntaxKind.WhileStatement:
-                    VisitWhileStatement((WhileStatementSyntax)item, scope);
+                case BoundKind.WhileStatement:
+                    VisitWhileStatement((BoundWhileStatement)item, scope);
                     break;
 
-                case SyntaxKind.AssignmentExpression:
-                    VisitAssignmentExpression((AssignmentExpressionSyntax)item, scope);
+                case BoundKind.AssignmentExpression:
+                    VisitAssignmentExpression((BoundAssignmentExpression)item, scope);
                     break;
 
                 default:
@@ -76,30 +70,29 @@ namespace JiteLang.Main.Visitor.Type
         }
 
         #region Declarations
-
-        public virtual void VisitNamespaceDeclaration(NamespaceDeclarationSyntax namespaceDeclarationSyntax, TypeScope scope)
+        public virtual void VisitNamespaceDeclaration(BoundNamespaceDeclaration namespaceDeclaration, TypeScope scope)
         {
-            foreach (var classDeclaration in namespaceDeclarationSyntax.Body.Members)
+            foreach (var classDeclaration in namespaceDeclaration.Body.Members)
             {
                 VisitClassDeclaration(classDeclaration, scope);
             }
         }
 
-        public virtual void VisitClassDeclaration(ClassDeclarationSyntax classDeclarationSyntax, TypeScope scope)
+        public virtual void VisitClassDeclaration(BoundClassDeclaration classDeclaration, TypeScope scope)
         {
             var newScope = new TypeScope(scope);
-            foreach (var item in classDeclarationSyntax.Body.Members)
+            foreach (var item in classDeclaration.Body.Members)
             {
                 switch (item.Kind)
                 {
-                    case SyntaxKind.ClassDeclaration:
-                        VisitClassDeclaration((ClassDeclarationSyntax)item, newScope);
+                    case BoundKind.ClassDeclaration:
+                        VisitClassDeclaration((BoundClassDeclaration)item, newScope);
                         break;
-                    case SyntaxKind.MethodDeclaration:
-                        VisitMethodDeclaration((MethodDeclarationSyntax)item, newScope);
+                    case BoundKind.MethodDeclaration:
+                        VisitMethodDeclaration((BoundMethodDeclaration)item, newScope);
                         break;
-                    case SyntaxKind.VariableDeclaration:
-                        VisitVariableDeclaration((VariableDeclarationSyntax)item, newScope);
+                    case BoundKind.VariableDeclaration:
+                        VisitVariableDeclaration((BoundVariableDeclaration)item, newScope);
                         break;
                     default:
                         throw new UnreachableException();
@@ -107,94 +100,93 @@ namespace JiteLang.Main.Visitor.Type
             }
         }
 
-        public virtual void VisitMethodDeclaration(MethodDeclarationSyntax methodDeclarationSyntax, TypeScope scope)
+        public virtual void VisitMethodDeclaration(BoundMethodDeclaration methodDeclaration, TypeScope scope)
         {
             var newScope = new TypeScope(scope);
 
             var @params = new Dictionary<string, TypeMethodParameter>();
 
-            foreach (var item in methodDeclarationSyntax.Params)
+            foreach (var item in methodDeclaration.Params)
             {
                 var paramType = VisitMethodParameter(item, newScope);
                 @params.Add(item.Identifier.Text, new(paramType));
             }
 
-            var returnType = FromSyntaxKind(((PredefinedTypeSyntax)methodDeclarationSyntax.ReturnType).Keyword.Kind);
-            scope.AddMethod(methodDeclarationSyntax.Identifier.Text, returnType, @params);
+            scope.AddMethod(methodDeclaration.Identifier.Text, methodDeclaration.ReturnType, @params);
 
-            foreach (var item in methodDeclarationSyntax.Body.Members)
+            _currentMethod = methodDeclaration;
+
+            foreach (var item in methodDeclaration.Body.Members)
             {
                 VisitDefaultBlock(item, newScope);
             }
+
+            _currentMethod = null;
         }
 
-        public virtual LangType VisitMethodParameter(ParameterDeclarationSyntax parameterDeclarationSyntax, TypeScope scope)
+        public virtual TypeSymbol VisitMethodParameter(BoundParameterDeclaration parameterDeclaration, TypeScope scope)
         {
-            var paramType = FromSyntaxKind(((PredefinedTypeSyntax)parameterDeclarationSyntax.Type).Keyword.Kind);
-            scope.AddVariable(parameterDeclarationSyntax.Identifier.Text, paramType);
+            var paramType = parameterDeclaration.Type;
+            scope.AddVariable(parameterDeclaration.Identifier.Text, paramType);
 
             return paramType;
         }
 
-        public virtual LangType VisitVariableDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, TypeScope scope)
+        public virtual TypeSymbol VisitVariableDeclaration(BoundVariableDeclaration variableDeclaration, TypeScope scope)
         {
-            var variableType = FromSyntaxKind(((PredefinedTypeSyntax)variableDeclarationSyntax.Type).Keyword.Kind);
+            var variableType = variableDeclaration.Type;
 
-            var variable = scope.AddVariable(variableDeclarationSyntax.Identifier.Text, variableType);
+            var variable = scope.AddVariable(variableDeclaration.Identifier.Text, variableType);
 
-            if (variableDeclarationSyntax.InitialValue is not null)
+            if (variableDeclaration.InitialValue is not null)
             {
-                var varValueType = VisitExpression(variableDeclarationSyntax.InitialValue, scope);
-                if (varValueType.Kind != variableType.Kind)
+                var varValueType = VisitExpression(variableDeclaration.InitialValue, scope);
+                if (varValueType.Text != variableType.Text)
                 {
-                    AddError($"Cannot implicit convert '{varValueType.Kind}' to type '{variableType.Kind}'", variableDeclarationSyntax.InitialValue.Position);
+                    AddError($"Cannot implicit convert '{varValueType.Text}' to type '{variableType.Text}'", variableDeclaration.Position);
                 }
             }
 
             return variableType;
         }
-
         #endregion Declarations
 
         #region Statements
-
-        public virtual void VisitIfStatement(IfStatementSyntax ifStatementSyntax, TypeScope scope)
+        public virtual void VisitIfStatement(BoundIfStatement ifStatement, TypeScope scope)
         {
-            VisitExpression(ifStatementSyntax.Condition, scope);
+            VisitExpression(ifStatement.Condition, scope);
 
             var newScope = new TypeScope(scope);
 
-            foreach (var item in ifStatementSyntax.Body.Members)
+            foreach (var item in ifStatement.Body.Members)
             {
                 VisitDefaultBlock(item, newScope);
             }
 
-            if (ifStatementSyntax.Else is not null)
+            if (ifStatement.Else is not null)
             {
-                VisitElseStatement(ifStatementSyntax.Else, scope);
+                VisitElseStatement(ifStatement.Else, scope);
             }
         }
 
-        public virtual void VisitElseStatement(StatementSyntax elseStatementSyntax, TypeScope scope)
+        public virtual void VisitElseStatement(BoundStatement elseStatement, TypeScope scope)
         {
+            var newScope = new TypeScope(scope);
+
+            switch (elseStatement.Kind)
             {
-                var newScope = new TypeScope(scope);
+                case BoundKind.BlockStatement:
+                    VisitElseBody((BoundBlockStatement<BoundNode>)elseStatement, newScope);
+                    break;
+                case BoundKind.IfStatement:
+                    VisitIfStatement((BoundIfStatement)elseStatement, newScope);
+                    break;
 
-                switch (elseStatementSyntax.Kind)
-                {
-                    case SyntaxKind.BlockStatement:
-                        VisitElseBody((BlockStatement<SyntaxNode>)elseStatementSyntax, newScope);
-                        break;
-                    case SyntaxKind.IfStatement:
-                        VisitIfStatement((IfStatementSyntax)elseStatementSyntax, newScope);
-                        break;
-
-                    default:
-                        break;
-                }
+                default:
+                    break;
             }
 
-            void VisitElseBody(BlockStatement<SyntaxNode> elseBody, TypeScope elseScope)
+            void VisitElseBody(BoundBlockStatement<BoundNode> elseBody, TypeScope elseScope)
             {
                 var newElseScope = new TypeScope(elseScope);
 
@@ -205,21 +197,31 @@ namespace JiteLang.Main.Visitor.Type
             }
         }
 
-        public virtual void VisitReturnStatement(ReturnStatementSyntax returnStatementSyntax, TypeScope scope)
+        public virtual void VisitReturnStatement(BoundReturnStatement returnStatement, TypeScope scope)
         {
-            if (returnStatementSyntax.ReturnValue is not null)
+            if (_currentMethod is null)
             {
-                VisitExpression(returnStatementSyntax.ReturnValue, scope);
+                AddError("Misplaced return", returnStatement.Position);
+            }
+
+            if (returnStatement.ReturnValue is not null)
+            {
+                var returnType = VisitExpression(returnStatement.ReturnValue, scope);
+
+                if (_currentMethod?.ReturnType.IsEqualsNotNone(returnType) == false)
+                {
+                    AddError($"Method {_currentMethod.Identifier.Text} must returns {_currentMethod.ReturnType.Text}", returnStatement.Position);
+                }
             }
         }
 
-        public virtual void VisitWhileStatement(WhileStatementSyntax whileStatementSyntax, TypeScope scope)
+        public virtual void VisitWhileStatement(BoundWhileStatement whileStatement, TypeScope scope)
         {
-            VisitExpression(whileStatementSyntax.Condition, scope);
+            VisitExpression(whileStatement.Condition, scope);
 
             var newScope = new TypeScope(scope);
 
-            foreach (var item in whileStatementSyntax.Body.Members)
+            foreach (var item in whileStatement.Body.Members)
             {
                 VisitDefaultBlock(item, newScope);
             }
@@ -228,193 +230,156 @@ namespace JiteLang.Main.Visitor.Type
         #endregion Statements
 
         #region Expressions
-        public virtual LangType VisitExpression(ExpressionSyntax expressionSyntax, TypeScope scope)
+        public virtual TypeSymbol VisitExpression(BoundExpression expression, TypeScope scope)
         {
-            switch (expressionSyntax.Kind)
+            switch (expression.Kind)
             {
-                case SyntaxKind.LiteralExpression:
-                    return VisitLiteralExpression((LiteralExpressionSyntax)expressionSyntax, scope);
+                case BoundKind.LiteralExpression:
+                    return VisitLiteralExpression((BoundLiteralExpression)expression, scope);
 
-                case SyntaxKind.MemberExpression:
-                    return VisitMemberExpression((MemberExpressionSyntax)expressionSyntax, scope);
+                case BoundKind.MemberExpression:
+                    return VisitMemberExpression((BoundMemberExpression)expression, scope);
 
-                case SyntaxKind.UnaryExpression:
-                    return VisitUnaryExpression((UnaryExpressionSyntax)expressionSyntax, scope);
+                case BoundKind.UnaryExpression:
+                    return VisitUnaryExpression((BoundUnaryExpression)expression, scope);
 
-                case SyntaxKind.CastExpression:
-                    return VisitCastExpression((CastExpressionSyntax)expressionSyntax, scope);
+                case BoundKind.CastExpression:
+                    return VisitCastExpression((BoundCastExpression)expression, scope);
 
-                case SyntaxKind.BinaryExpression:
-                    return VisitBinaryExpression((BinaryExpressionSyntax)expressionSyntax, scope);
+                case BoundKind.BinaryExpression:
+                    return VisitBinaryExpression((BoundBinaryExpression)expression, scope);
 
-                case SyntaxKind.LogicalExpression:
-                    return VisitLogicalExpression((LogicalExpressionSyntax)expressionSyntax, scope);
+                case BoundKind.LogicalExpression:
+                    return VisitLogicalExpression((BoundLogicalExpression)expression, scope);
 
-                case SyntaxKind.IdentifierExpression:
-                    return VisitIdentifierExpression((IdentifierExpressionSyntax)expressionSyntax, scope);
+                case BoundKind.IdentifierExpression:
+                    return VisitIdentifierExpression((BoundIdentifierExpression)expression, scope);
 
-                case SyntaxKind.CallExpression:
-                    return VisitCallExpression((CallExpressionSyntax)expressionSyntax, scope);
+                case BoundKind.CallExpression:
+                    return VisitCallExpression((BoundCallExpression)expression, scope);
 
-                case SyntaxKind.AssignmentExpression:
-                    return VisitAssignmentExpression((AssignmentExpressionSyntax)expressionSyntax, scope);
+                case BoundKind.AssignmentExpression:
+                    return VisitAssignmentExpression((BoundAssignmentExpression)expression, scope);
 
-                default:
-                    return LangType.None;
-            }
-        }
-
-        public virtual LangType VisitBinaryExpression(BinaryExpressionSyntax binaryExpressionSyntax, TypeScope scope)
-        {
-            VisitExpression(binaryExpressionSyntax.Left, scope);
-            VisitExpression(binaryExpressionSyntax.Right, scope);
-
-            var operation = binaryExpressionSyntax.Operation;
-
-            switch (operation)
-            {
-                case SyntaxKind.PlusToken:
-
-                    break;
-                case SyntaxKind.MinusToken:
-
-                    break;
-                case SyntaxKind.AsteriskToken:
-
-                    break;
-                case SyntaxKind.SlashToken:
-
-                    break;
-                case SyntaxKind.PercentToken:
-
-                    break;
                 default:
                     throw new UnreachableException();
             }
-
-            throw new UnreachableException();
         }
 
-        public virtual LangType VisitLiteralExpression(LiteralExpressionSyntax literalExpressionSyntax, TypeScope scope)
+        public virtual TypeSymbol VisitBinaryExpression(BoundBinaryExpression binaryExpression, TypeScope scope)
         {
-            var literalValue = literalExpressionSyntax.Value;
+            var leftType = VisitExpression(binaryExpression.Left, scope);
+            var rightType = VisitExpression(binaryExpression.Right, scope);
 
-            return FromSyntaxKind(literalValue.Kind);
-        }
+            var resultType = BinaryExprTypeResolver.Resolve(leftType, binaryExpression.Operation, rightType);
 
-        public virtual LangType VisitMemberExpression(MemberExpressionSyntax memberExpressionSyntax, TypeScope scope)
-        {
-            throw new NotImplementedException();
-        }
-
-        public virtual LangType VisitUnaryExpression(UnaryExpressionSyntax unaryExpressionSyntax, TypeScope scope)
-        {
-            throw new NotImplementedException();
-        }
-
-        public virtual LangType VisitCastExpression(CastExpressionSyntax castExpressionSyntax, TypeScope scope)
-        {
-            throw new NotImplementedException();
-        }
-
-        public virtual LangType VisitCallExpression(CallExpressionSyntax callExpressionSyntax, TypeScope scope)
-        {
-            var method = scope.GetMethod(((IdentifierExpressionSyntax)callExpressionSyntax.Caller).Text);
-
-            for (int i = 0; i < callExpressionSyntax.Args.Count; i++)
+            if (resultType == TypeSymbol.None)
             {
-                var argItem = callExpressionSyntax.Args[i];
+                AddError($"Cannot implicit convert '{leftType.Text}' to type '{rightType.Text}'", binaryExpression.Left.Position);
+            }
+
+            return resultType;
+            //var operation = binaryExpression.Operation;
+
+            //switch (operation)
+            //{
+            //    case BinaryOperatorKind.Plus:
+                    
+            //        break;
+            //    case BinaryOperatorKind.Minus:
+
+            //        break;
+            //    case BinaryOperatorKind.Multiply:
+
+            //        break;
+            //    case BinaryOperatorKind.Divide:
+
+            //        break;
+            //    case BinaryOperatorKind.Modulus:
+
+            //        break;
+            //    default:
+            //        throw new UnreachableException();
+            //}
+            //throw new UnreachableException();
+        }
+
+        public virtual TypeSymbol VisitLiteralExpression(BoundLiteralExpression literalExpression, TypeScope scope)
+        {
+            return literalExpression.Value.Type;
+        }
+
+        public virtual TypeSymbol VisitMemberExpression(BoundMemberExpression memberExpression, TypeScope scope)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual TypeSymbol VisitUnaryExpression(BoundUnaryExpression unaryExpression, TypeScope scope)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual TypeSymbol VisitCastExpression(BoundCastExpression castExpression, TypeScope scope)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual TypeSymbol VisitCallExpression(BoundCallExpression callExpression, TypeScope scope)
+        {
+            var method = scope.GetMethod(((BoundIdentifierExpression)callExpression.Caller).Text);
+
+            for (int i = 0; i < callExpression.Args.Count; i++)
+            {
+                var argItem = callExpression.Args[i];
 
                 var argType = VisitExpression(argItem, scope);
 
                 var paramItem = method.Params.ElementAtOrDefault(i);
 
-                if (!argType.IsEqualsNotNone(paramItem.Value?.Type)) 
+                if (!argType.IsEqualsNotNone(paramItem.Value?.Type))
                 {
-                    AddError($"Expected type {argType.GetStr()}", argItem.Position);
+                    AddError($"Expected type {argType.Text}", argItem.Position);
                 }
             }
 
             return method.ReturnType;
         }
 
-        public virtual LangType VisitLogicalExpression(LogicalExpressionSyntax logicalExpressionSyntax, TypeScope scope)
+        public virtual TypeSymbol VisitLogicalExpression(BoundLogicalExpression logicalExpression, TypeScope scope)
         {
-            VisitExpression(logicalExpressionSyntax.Left, scope);
-            VisitExpression(logicalExpressionSyntax.Right, scope);
+            var leftType = VisitExpression(logicalExpression.Left, scope);
+            var rightType = VisitExpression(logicalExpression.Right, scope);
 
-            var operation = logicalExpressionSyntax.Operation;
+            var resultType = LogicalExprTypeResolver.Resolve(leftType, logicalExpression.Operation, rightType);
 
-            switch (operation)
+            if (resultType == TypeSymbol.None)
             {
-                case SyntaxKind.BarBarToken:
-                    break;
-                case SyntaxKind.AmpersandAmpersandToken:
-                    break;
-                case SyntaxKind.EqualsEqualsToken:
-                    break;
-                case SyntaxKind.NotEqualsToken:
-                    break;
-                case SyntaxKind.GreaterThanToken:
-                    break;
-                case SyntaxKind.GreaterThanEqualsToken:
-                    break;
-                case SyntaxKind.LessThanToken:
-                    break;
-                case SyntaxKind.LessThanEqualsToken:
-                    break;
-
-                default:
-                    throw new NotImplementedException();
+                AddError($"Operator not defined for '{leftType.Text}' and '{rightType.Text}'", logicalExpression.Left.Position);
             }
 
-            throw new NotImplementedException();
-
+            return resultType;
         }
 
-        public virtual LangType VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpressionSyntax, TypeScope scope)
+        public virtual TypeSymbol VisitAssignmentExpression(BoundAssignmentExpression assignmentExpression, TypeScope scope)
         {
-            //VisitExpression(assignmentExpressionSyntax.Right, scope);
-            throw new NotImplementedException();
+            var rightType = VisitExpression(assignmentExpression.Right, scope);
+            var leftType = VisitExpression(assignmentExpression.Left, scope);
 
+            if (!rightType.IsEqualsNotNone(leftType))
+            {
+                AddError($"Cannot implicit convert '{leftType.Text}' to type '{rightType.Text}'", assignmentExpression.Position);
+                return TypeSymbol.None;
+            }
+
+            return rightType;
         }
 
-        public virtual LangType VisitIdentifierExpression(IdentifierExpressionSyntax identifierExpressionSyntax, TypeScope scope)
+        public virtual TypeSymbol VisitIdentifierExpression(BoundIdentifierExpression identifierExpression, TypeScope scope)
         {
-            var variable = scope.GetVariable(identifierExpressionSyntax.Text);
+            var variable = scope.GetVariable(identifierExpression.Text);
             return variable.Type;
         }
 
         #endregion Expressions
-        private static LangType FromSyntaxKind(SyntaxKind syntaxKind)
-        {
-            switch (syntaxKind)
-            {
-                case SyntaxKind.StringLiteralToken:
-                case SyntaxKind.StringKeyword:
-                    return LangType.String;
-
-                case SyntaxKind.CharLiteralToken:
-                case SyntaxKind.CharKeyword:
-                    return LangType.Char;
-
-                case SyntaxKind.IntLiteralToken:
-                case SyntaxKind.IntKeyword:
-                    return LangType.Int;
-
-                case SyntaxKind.LongLiteralToken:
-                case SyntaxKind.LongKeyword:
-                    return LangType.Long;
-
-                case SyntaxKind.FalseLiteralToken:
-                case SyntaxKind.FalseKeyword:
-                case SyntaxKind.TrueLiteralToken:
-                case SyntaxKind.TrueKeyword:
-                    return LangType.Bool;
-
-                default:
-                    return LangType.None;
-            }
-        }
     }
 }

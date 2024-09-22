@@ -71,7 +71,7 @@ namespace JiteLang.Syntax
             return identifier;
         }
 
-        public static SyntaxToken TokenWithValue(TokenInfo tokenInfo)
+        public static SyntaxToken TokenWithValue(in TokenInfo tokenInfo)
         {
             switch (tokenInfo.Kind)
             {

@@ -8,6 +8,6 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
     {
         public override SyntaxKind Kind => SyntaxKind.BlockStatement;
 
-        public IList<TMembers> Members { get; set; } = new List<TMembers>();
+        public List<TMembers> Members { get; set; } = new List<TMembers>();
     }
 }

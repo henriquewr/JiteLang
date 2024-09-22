@@ -8,6 +8,7 @@ using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 using JiteLang.Main.LangParser.SyntaxTree;
+using JiteLang.Main.Shared;
 using JiteLang.Syntax;
 using JiteLang.Utilities;
 
@@ -26,7 +27,7 @@ namespace JiteLang.Main.LangParser
             _parsedSyntaxTree = new ParsedSyntaxTree();
         }
 
-        private void AddErrorMessage(string errorMessage, SyntaxPosition position)
+        private void AddErrorMessage(string errorMessage, in SyntaxPosition position)
         {
             var errorText = $"{errorMessage}   On {position.GetPosText()}";
             _parsedSyntaxTree.Errors.Add(errorText);
@@ -331,7 +332,10 @@ namespace JiteLang.Main.LangParser
         {
             _tokens.Advance(out var retToken);
 
-            var returnStmp = new ReturnStatementSyntax();
+            var returnStmp = new ReturnStatementSyntax
+            {
+                Position = retToken.Position
+            };
 
             if (_tokens.Current.Kind != SyntaxKind.SemiColon)
             {
@@ -562,10 +566,30 @@ namespace JiteLang.Main.LangParser
             {
                 _tokens.Advance(out var operationToken);
                 var right = getData();
-                left = new LogicalExpressionSyntax(left, right, operationToken.Kind);
+                left = new LogicalExpressionSyntax(left, Convert(operationToken.Kind), right);
             }
 
             return left;
+
+            static LogicalOperatorKind Convert(SyntaxKind syntaxKind)
+            {
+                var operation = syntaxKind switch
+                {
+                    SyntaxKind.AmpersandAmpersandToken => LogicalOperatorKind.AndAnd,
+                    SyntaxKind.BarBarToken => LogicalOperatorKind.OrOr,
+
+                    SyntaxKind.EqualsEqualsToken => LogicalOperatorKind.EqualsEquals,
+                    SyntaxKind.NotEqualsToken => LogicalOperatorKind.NotEquals,
+
+                    SyntaxKind.GreaterThanToken => LogicalOperatorKind.GreaterThan,
+                    SyntaxKind.GreaterThanEqualsToken => LogicalOperatorKind.GreaterThanOrEquals,
+
+                    SyntaxKind.LessThanToken => LogicalOperatorKind.LessThan,
+                    SyntaxKind.LessThanEqualsToken => LogicalOperatorKind.LessThanOrEquals,
+                    _ => throw new UnreachableException()
+                };
+                return operation;
+            }
         }
 
         private ExpressionSyntax ParseBinaryLeftExpr(Func<SyntaxKind, bool> willAdvance, Func<ExpressionSyntax> getData, [CallerMemberName] string callerForDebugView = "doNotUse")
@@ -576,10 +600,24 @@ namespace JiteLang.Main.LangParser
             {
                 _tokens.Advance(out var operationToken);
                 var right = getData();
-                left = new BinaryExpressionSyntax(left, right, operationToken.Kind);
+                left = new BinaryExpressionSyntax(left, Convert(operationToken.Kind), right);
             }
 
             return left;
+
+            static BinaryOperatorKind Convert(SyntaxKind syntaxKind)
+            {
+                var operation = syntaxKind switch
+                {
+                    SyntaxKind.AsteriskToken => BinaryOperatorKind.Multiply,
+                    SyntaxKind.MinusToken => BinaryOperatorKind.Minus,
+                    SyntaxKind.PercentToken => BinaryOperatorKind.Modulus,
+                    SyntaxKind.PlusToken => BinaryOperatorKind.Plus,
+                    SyntaxKind.SlashToken => BinaryOperatorKind.Divide,
+                    _ => throw new UnreachableException()
+                };
+                return operation;
+            }
         }
 
         private ExpressionSyntax ParsePrimaryExpr()

@@ -1,18 +1,13 @@
-﻿using JiteLang.Main.CodeAnalysis.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using JiteLang.Main.Bound;
 
 namespace JiteLang.Main.Visitor.Type.Scope
 {
     internal class TypeVariable
     {
-        public TypeVariable(LangType varType)
+        public TypeVariable(TypeSymbol varType)
         {
             Type = varType;
         }
-        public LangType Type { get; set; }
+        public TypeSymbol Type { get; set; }
     }
 }

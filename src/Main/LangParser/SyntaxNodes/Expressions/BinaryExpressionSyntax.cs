@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using JiteLang.Main.Shared;
 using JiteLang.Syntax;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
@@ -11,7 +7,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.BinaryExpression;
 
-        public BinaryExpressionSyntax(ExpressionSyntax left, ExpressionSyntax right, SyntaxKind operation) 
+        public BinaryExpressionSyntax(ExpressionSyntax left, BinaryOperatorKind operation, ExpressionSyntax right) 
         {
             Left = left;
             Right = right;
@@ -19,7 +15,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
         }
 
         public ExpressionSyntax Left { get; set; }
+        public BinaryOperatorKind Operation { get; set; }
         public ExpressionSyntax Right { get; set; }
-        public SyntaxKind Operation { get; set; }
     }
 }

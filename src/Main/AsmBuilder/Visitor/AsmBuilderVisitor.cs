@@ -3,21 +3,20 @@ using System.Diagnostics;
 using JiteLang.Main.Builder.Instructions;
 using JiteLang.Main.Builder.AsmBuilder;
 using System;
-using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
-using JiteLang.Syntax;
-using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 using JiteLang.Main.Builder.Operands;
-using JiteLang.Main.LangParser.SyntaxNodes;
-using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using System.Linq;
-using JiteLang.Main.LangParser.SyntaxTree;
-using JiteLang.Main.Shared;
-using JiteLang.Main.Visitor.Syntax;
 using JiteLang.Main.AsmBuilder.Scope;
+using JiteLang.Main.Bound.Visitor;
+using JiteLang.Main.Bound.Statements.Declaration;
+using JiteLang.Main.Bound.Statements;
+using JiteLang.Main.Bound.Expressions;
+using JiteLang.Main.Bound;
+using JiteLang.Main.Builder;
+using JiteLang.Main.Shared;
 
 namespace JiteLang.Main.AsmBuilder.Visitor
 {
-    internal class AsmBuilderVisitor : ISyntaxVisitor<List<Instruction>,
+    internal class AsmBuilderVisitor : IBoundVisitor<List<Instruction>,
         List<Instruction>,
         List<Instruction>,
         List<Instruction>,
@@ -40,15 +39,16 @@ namespace JiteLang.Main.AsmBuilder.Visitor
 
         private const string EXIT_METHOD_PREFIX = "exit_method";
 
-        private readonly Stack<Instruction> _returnTo = new();
+        private Instruction? _returnTo;
 
         public AsmBuilderVisitor(AssemblyBuilder asmBuilder, AssemblyBuilderAbstractions asmBuilderAbstractions)
         {
             _asmBuilder = asmBuilder;
             _asmBuilderAbstractions = asmBuilderAbstractions;
         }
+
         #region Declarations
-        public List<Instruction> VisitNamespaceDeclaration(NamespaceDeclarationSyntax root, CodeScope scope)
+        public List<Instruction> VisitNamespaceDeclaration(BoundNamespaceDeclaration root, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
@@ -69,7 +69,7 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             return instructions;
         }
  
-        public List<Instruction> VisitClassDeclaration(ClassDeclarationSyntax classDeclaration, CodeScope scope)
+        public List<Instruction> VisitClassDeclaration(BoundClassDeclaration classDeclaration, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
@@ -79,14 +79,14 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             {
                 switch (item.Kind)
                 {
-                    case SyntaxKind.ClassDeclaration:
-                        instructions.AddRange(VisitClassDeclaration((ClassDeclarationSyntax)item, newScope));
+                    case BoundKind.ClassDeclaration:
+                        instructions.AddRange(VisitClassDeclaration((BoundClassDeclaration)item, newScope));
                         break;
-                    case SyntaxKind.MethodDeclaration:
-                        instructions.AddRange(VisitMethodDeclaration((MethodDeclarationSyntax)item, newScope));
+                    case BoundKind.MethodDeclaration:
+                        instructions.AddRange(VisitMethodDeclaration((BoundMethodDeclaration)item, newScope));
                         break;
-                    case SyntaxKind.VariableDeclaration:
-                        instructions.AddRange(VisitVariableDeclaration((VariableDeclarationSyntax)item, newScope));
+                    case BoundKind.VariableDeclaration:
+                        instructions.AddRange(VisitVariableDeclaration((BoundVariableDeclaration)item, newScope));
                         break;
                     default:
                         throw new UnreachableException();
@@ -96,16 +96,16 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             return instructions;
         }
 
-        public List<Instruction> VisitMethodDeclaration(MethodDeclarationSyntax methodDeclarationSyntax, CodeScope scope)
+        public List<Instruction> VisitMethodDeclaration(BoundMethodDeclaration methodDeclaration, CodeScope scope)
         {
             const int UpperInitialPos = 8; //skip return address
 
             List<Instruction> instructions = new()
             {
-                _asmBuilder.Label(new Operand(methodDeclarationSyntax.Identifier.Text))
+                _asmBuilder.Label(new Operand(methodDeclaration.Identifier.Text))
             };
 
-            var allocatedValue = methodDeclarationSyntax.Body.Members.Where(x => x.Kind == SyntaxKind.VariableDeclaration).Count() * 8;
+            var allocatedValue = methodDeclaration.Body.Members.Where(x => x.Kind == BoundKind.VariableDeclaration).Count() * 8;
 
             CodeScope newScope = new(scope, allocatedValue)
             {
@@ -113,22 +113,21 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             };
 
             Dictionary<string, CodeMethodParameter> methodParams = new();
-            foreach (var item in methodDeclarationSyntax.Params)
+            foreach (var item in methodDeclaration.Params)
             {
                 methodParams.Add(item.Identifier.Text, new(item.Type));
                 instructions.AddRange(VisitMethodParameter(item, newScope));
             }
-            scope.AddMethod(methodDeclarationSyntax.Identifier.Text, methodDeclarationSyntax.ReturnType, methodParams);
+            scope.AddMethod(methodDeclaration.Identifier.Text, methodDeclaration.ReturnType, methodParams);
 
             var upperStack = newScope.UpperStackPosition - UpperInitialPos;
             newScope.HasStackFrame = newScope.BytesAllocated != 0 || upperStack != 0;
 
 
-            var returnMethodLabel = new Operand(GenerateExitMethodLabel(methodDeclarationSyntax.Identifier.Text));
+            var returnMethodLabel = new Operand(GenerateExitMethodLabel(methodDeclaration.Identifier.Text));
 
-
-            _returnTo.Push(_asmBuilder.Jmp(returnMethodLabel));
-            foreach (var item in methodDeclarationSyntax.Body.Members)
+            _returnTo = _asmBuilder.Jmp(returnMethodLabel);
+            foreach (var item in methodDeclaration.Body.Members)
             {
                 instructions.AddRange(VisitDefaultBlock(item, newScope, out bool isReturn));
             }
@@ -151,31 +150,32 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             }
             
             instructions.Add(_asmBuilder.Ret(new Operand(upperStack.ToString())));
+            _returnTo = null;
             return instructions;
         }
 
-        public List<Instruction> VisitMethodParameter(ParameterDeclarationSyntax parameterDeclarationSyntax, CodeScope scope)
+        public List<Instruction> VisitMethodParameter(BoundParameterDeclaration parameterDeclaration, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
-            scope.AddVariable(parameterDeclarationSyntax.Identifier.Text, parameterDeclarationSyntax.Type, true);
+            scope.AddVariable(parameterDeclaration.Identifier.Text, parameterDeclaration.Type, true);
 
             return instructions;
         }
 
-        public List<Instruction> VisitVariableDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, CodeScope scope)
+        public List<Instruction> VisitVariableDeclaration(BoundVariableDeclaration variableDeclaration, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
-            var variable = scope.AddVariable(variableDeclarationSyntax.Identifier.Text, variableDeclarationSyntax.Type, false);
+            var variable = scope.AddVariable(variableDeclaration.Identifier.Text, variableDeclaration.Type, false);
 
-            if (variableDeclarationSyntax.InitialValue is not null)
+            if (variableDeclaration.InitialValue is not null)
             {
-                instructions.AddRange(VisitExpression(variableDeclarationSyntax.InitialValue, scope));
+                instructions.AddRange(VisitExpression(variableDeclaration.InitialValue, scope));
                 var rax = new Operand("rax");
                 instructions.Add(_asmBuilder.Pop(rax));
 
-                var loc = scope.GetRbpPosStr(variableDeclarationSyntax.Identifier.Text);
+                var loc = scope.GetRbpPosStr(variableDeclaration.Identifier.Text);
 
                 instructions.Add(_asmBuilder.Mov(new Operand(loc), rax));
             }
@@ -185,28 +185,31 @@ namespace JiteLang.Main.AsmBuilder.Visitor
         #endregion Declarations
 
         #region Statements
-        public List<Instruction> VisitReturnStatement(ReturnStatementSyntax returnStatementSyntax, CodeScope scope)
+        public List<Instruction> VisitReturnStatement(BoundReturnStatement returnStatement, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
-            if (returnStatementSyntax.ReturnValue is not null)
+            if (returnStatement.ReturnValue is not null)
             {
-                instructions.AddRange(VisitExpression(returnStatementSyntax.ReturnValue, scope));
+                instructions.AddRange(VisitExpression(returnStatement.ReturnValue, scope));
             }
 
             instructions.Add(_asmBuilder.Pop(new Operand("rax")));
 
-            var returnTo = _returnTo.Pop();
+            if(_returnTo is null)
+            {
+                throw new InvalidOperationException("No return defined"); // set in the VisitMethod 
+            }
 
-            instructions.Add(returnTo);
+            instructions.Add(_returnTo);
 
             return instructions;
         }
 
-        public List<Instruction> VisitIfStatement(IfStatementSyntax ifStatementSyntax, CodeScope scope)
+        public List<Instruction> VisitIfStatement(BoundIfStatement ifStatement, CodeScope scope)
         {
             var instructions = new List<Instruction>();
-            instructions.AddRange(VisitExpression(ifStatementSyntax.Condition, scope));
+            instructions.AddRange(VisitExpression(ifStatement.Condition, scope));
 
             var rax = new Operand("rax");
             instructions.Add(_asmBuilder.Pop(rax));
@@ -220,12 +223,12 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             int stackFrameInitPos = instructions.Count;
             int? stackFrameEndPos = null;
 
-            var allocatedValue = ifStatementSyntax.Body.Members.Where(x => x.Kind == SyntaxKind.VariableDeclaration).Count() * 8;
+            var allocatedValue = ifStatement.Body.Members.Where(x => x.Kind == BoundKind.VariableDeclaration).Count() * 8;
             var newScope = new CodeScope(scope, allocatedValue);
 
             newScope.HasStackFrame = newScope.BytesAllocated != 0;
 
-            foreach (var item in ifStatementSyntax.Body.Members)
+            foreach (var item in ifStatement.Body.Members)
             {
                 instructions.AddRange(VisitDefaultBlock(item, newScope, out bool isReturn));
                 if (isReturn)
@@ -242,9 +245,9 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             instructions.Add(_asmBuilder.Jmp(endIfLabelOperand));
             instructions.Add(_asmBuilder.Label(toElseLabelOperand));
 
-            if (ifStatementSyntax.Else is not null)
+            if (ifStatement.Else is not null)
             {
-                instructions.AddRange(VisitElseStatement(ifStatementSyntax.Else, scope));
+                instructions.AddRange(VisitElseStatement(ifStatement.Else, scope));
             }
 
             instructions.Add(_asmBuilder.Label(endIfLabelOperand));
@@ -252,36 +255,27 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             return instructions;
         }
 
-        public List<Instruction> VisitElseStatement(StatementSyntax elseStatementSyntax, CodeScope scope)
+        public List<Instruction> VisitElseStatement(BoundStatement elseStatement, CodeScope scope)
         {
+            var newScope = new CodeScope(scope);
+
+            var elseInstructions = elseStatement.Kind switch
             {
-                var instructions = new List<Instruction>();
-                var newScope = new CodeScope(scope);
+                BoundKind.BlockStatement => VisitElseBody((BoundBlockStatement<BoundNode>)elseStatement, newScope),
+                BoundKind.IfStatement => VisitIfStatement((BoundIfStatement)elseStatement, newScope),
+                _ => throw new UnreachableException(),
+            };
 
-                switch (elseStatementSyntax.Kind)
-                {
-                    case SyntaxKind.BlockStatement:
-                        instructions.AddRange(VisitElseBody((BlockStatement<SyntaxNode>)elseStatementSyntax, newScope));
-                        break;
-                    case SyntaxKind.IfStatement:
-                        instructions.AddRange(VisitIfStatement((IfStatementSyntax)elseStatementSyntax, newScope));
-                        break;
+            return elseInstructions;
 
-                    default:
-                        break;
-                }
-
-                return instructions;
-            }
-
-            IList<Instruction> VisitElseBody(BlockStatement<SyntaxNode> elseBody, CodeScope elseScope) 
+            List<Instruction> VisitElseBody(BoundBlockStatement<BoundNode> elseBody, CodeScope elseScope) 
             {
                 var instructions = new List<Instruction>();
 
                 int stackFrameInitPos = instructions.Count;
                 int? stackFrameEndPos = null;
 
-                var allocatedValue = elseBody.Members.Where(x => x.Kind == SyntaxKind.VariableDeclaration).Count() * 8;
+                var allocatedValue = elseBody.Members.Where(x => x.Kind == BoundKind.VariableDeclaration).Count() * 8;
                 var newElseScope = new CodeScope(elseScope, allocatedValue);
 
                 newElseScope.HasStackFrame = newElseScope.BytesAllocated != 0;
@@ -304,7 +298,7 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             }
         }
 
-        public List<Instruction> VisitWhileStatement(WhileStatementSyntax whileStatementSyntax, CodeScope scope)
+        public List<Instruction> VisitWhileStatement(BoundWhileStatement whileStatement, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
@@ -314,7 +308,7 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             instructions.Add(_asmBuilder.Label(whileStartLabelOp));
 
 
-            instructions.AddRange(VisitExpression(whileStatementSyntax.Condition, scope));
+            instructions.AddRange(VisitExpression(whileStatement.Condition, scope));
             var rax = new Operand("rax");
             instructions.Add(_asmBuilder.Pop(rax));
             instructions.Add(_asmBuilder.Test(rax, rax));
@@ -325,11 +319,11 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             int stackFrameInitPos = instructions.Count;
             int? stackFrameEndPos = null;
 
-            var allocatedValue = whileStatementSyntax.Body.Members.Where(x => x.Kind == SyntaxKind.VariableDeclaration).Count() * 8;
+            var allocatedValue = whileStatement.Body.Members.Where(x => x.Kind == BoundKind.VariableDeclaration).Count() * 8;
             var newScope = new CodeScope(scope, allocatedValue);
             newScope.HasStackFrame = newScope.BytesAllocated != 0;
 
-            foreach (var item in whileStatementSyntax.Body.Members)
+            foreach (var item in whileStatement.Body.Members)
             {
                 instructions.AddRange(VisitDefaultBlock(item, newScope, out bool isReturn));
                 if (isReturn)
@@ -357,54 +351,54 @@ namespace JiteLang.Main.AsmBuilder.Visitor
         #endregion Statements
 
         #region Expressions
-        public List<Instruction> VisitExpression(ExpressionSyntax expressionSyntax, CodeScope scope)
+        public List<Instruction> VisitExpression(BoundExpression expression, CodeScope scope)
         {
-            var expression = expressionSyntax.Kind switch
+            var expressionInstructions = expression.Kind switch
             {
-                SyntaxKind.LiteralExpression => VisitLiteralExpression((LiteralExpressionSyntax)expressionSyntax, scope),
-                SyntaxKind.MemberExpression => VisitMemberExpression((MemberExpressionSyntax)expressionSyntax, scope),
-                SyntaxKind.UnaryExpression => VisitUnaryExpression((UnaryExpressionSyntax)expressionSyntax, scope),
-                SyntaxKind.CastExpression => VisitCastExpression((CastExpressionSyntax)expressionSyntax, scope),
-                SyntaxKind.BinaryExpression => VisitBinaryExpression((BinaryExpressionSyntax)expressionSyntax, scope),
-                SyntaxKind.LogicalExpression => VisitLogicalExpression((LogicalExpressionSyntax)expressionSyntax, scope),
-                SyntaxKind.IdentifierExpression => VisitIdentifierExpression((IdentifierExpressionSyntax)expressionSyntax, scope),
-                SyntaxKind.CallExpression => VisitCallExpression((CallExpressionSyntax)expressionSyntax, scope),
-                SyntaxKind.AssignmentExpression => VisitAssignmentExpression((AssignmentExpressionSyntax)expressionSyntax, scope),
+                BoundKind.LiteralExpression => VisitLiteralExpression((BoundLiteralExpression)expression, scope),
+                BoundKind.MemberExpression => VisitMemberExpression((BoundMemberExpression)expression, scope),
+                BoundKind.UnaryExpression => VisitUnaryExpression((BoundUnaryExpression)expression, scope),
+                BoundKind.CastExpression => VisitCastExpression((BoundCastExpression)expression, scope),
+                BoundKind.BinaryExpression => VisitBinaryExpression((BoundBinaryExpression)expression, scope),
+                BoundKind.LogicalExpression => VisitLogicalExpression((BoundLogicalExpression)expression, scope),
+                BoundKind.IdentifierExpression => VisitIdentifierExpression((BoundIdentifierExpression)expression, scope),
+                BoundKind.CallExpression => VisitCallExpression((BoundCallExpression)expression, scope),
+                BoundKind.AssignmentExpression => VisitAssignmentExpression((BoundAssignmentExpression)expression, scope),
                 _ => throw new UnreachableException(),
             };
 
-            return expression;
+            return expressionInstructions;
         }
 
-        public List<Instruction> VisitBinaryExpression(BinaryExpressionSyntax binaryExpressionSyntax, CodeScope scope)
+        public List<Instruction> VisitBinaryExpression(BoundBinaryExpression binaryExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
-            instructions.AddRange(VisitExpression(binaryExpressionSyntax.Left, scope));
-            instructions.AddRange(VisitExpression(binaryExpressionSyntax.Right, scope));
+            instructions.AddRange(VisitExpression(binaryExpression.Left, scope));
+            instructions.AddRange(VisitExpression(binaryExpression.Right, scope));
 
             instructions.Add(_asmBuilder.Pop(new Operand("rbx")));
             instructions.Add(_asmBuilder.Pop(new Operand("rax")));
 
-            var operation = binaryExpressionSyntax.Operation;
+            var operation = binaryExpression.Operation;
 
             string resultIsIn;
 
             switch (operation)
             {
-                case SyntaxKind.PlusToken:
+                case BinaryOperatorKind.Plus:
                     instructions.Add(_asmBuilder.Add(new Operand("rax"), new Operand("rbx")));
                     resultIsIn = "rax";
                     break;
-                case SyntaxKind.MinusToken:
+                case BinaryOperatorKind.Minus:
                     instructions.Add(_asmBuilder.Sub(new Operand("rax"), new Operand("rbx")));
                     resultIsIn = "rax";
                     break;
-                case SyntaxKind.AsteriskToken:
+                case BinaryOperatorKind.Multiply:
                     instructions.Add(_asmBuilder.Imul(new Operand("rax"), new Operand("rbx")));
                     resultIsIn = "rax";
                     break;
-                case SyntaxKind.SlashToken:
+                case BinaryOperatorKind.Divide:
                     instructions.Add(_asmBuilder.Push(new Operand("rdx")));
 
 
@@ -416,7 +410,7 @@ namespace JiteLang.Main.AsmBuilder.Visitor
 
                     resultIsIn = "rax";
                     break;
-                case SyntaxKind.PercentToken:
+                case BinaryOperatorKind.Modulus:
                     instructions.Add(_asmBuilder.Push(new Operand("rax")));
 
 
@@ -429,7 +423,6 @@ namespace JiteLang.Main.AsmBuilder.Visitor
                     break;
                 default:
                     throw new UnreachableException();
-                    break;
             }
 
             instructions.Add(_asmBuilder.Push(new Operand(resultIsIn)));
@@ -437,60 +430,73 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             return instructions;
         }
      
-        public List<Instruction> VisitIdentifierExpression(IdentifierExpressionSyntax identifierExpressionSyntax, CodeScope scope)
+        public List<Instruction> VisitIdentifierExpression(BoundIdentifierExpression identifierExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>
             {
-                _asmBuilder.Mov(new Operand("rax"), new Operand(scope.GetRbpPosStr(identifierExpressionSyntax.Text))),
+                _asmBuilder.Mov(new Operand("rax"), new Operand(scope.GetRbpPosStr(identifierExpression.Text))),
                 _asmBuilder.Push(new Operand("rax"))
             };
 
             return instructions;
         }
 
-        public List<Instruction> VisitLogicalExpression(LogicalExpressionSyntax logicalExpressionSyntax, CodeScope scope)
+        public List<Instruction> VisitLogicalExpression(BoundLogicalExpression logicalExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
-            instructions.AddRange(VisitExpression(logicalExpressionSyntax.Left, scope));
-            instructions.AddRange(VisitExpression(logicalExpressionSyntax.Right, scope));
+            instructions.AddRange(VisitExpression(logicalExpression.Left, scope));
+            instructions.AddRange(VisitExpression(logicalExpression.Right, scope));
 
             instructions.Add(_asmBuilder.Pop(new Operand("rbx")));
             instructions.Add(_asmBuilder.Pop(new Operand("rax")));
 
-            var operation = logicalExpressionSyntax.Operation;
+            var operation = logicalExpression.Operation;
 
             switch (operation)
             {
-                case SyntaxKind.BarBarToken:
+                case LogicalOperatorKind.OrOr:
                     instructions.Add(_asmBuilder.Or(new Operand("rax"), new Operand("rbx")));
                     break;
-                case SyntaxKind.AmpersandAmpersandToken:
+                case LogicalOperatorKind.AndAnd:
                     instructions.Add(_asmBuilder.And(new Operand("rax"), new Operand("rbx")));
                     break;
 
-                case SyntaxKind.EqualsEqualsToken:
+                case LogicalOperatorKind.EqualsEquals:
                     instructions.Add(_asmBuilder.Cmp(new Operand("rax"), new Operand("rbx")));
                     instructions.Add(_asmBuilder.Sete(new Operand("al")));
                     instructions.Add(_asmBuilder.Movzx(new Operand("rax"), new Operand("al")));
                     break;
-                case SyntaxKind.NotEqualsToken:
+                case LogicalOperatorKind.NotEquals:
                     instructions.Add(_asmBuilder.Cmp(new Operand("rax"), new Operand("rbx")));
                     instructions.Add(_asmBuilder.Setne(new Operand("al")));
                     instructions.Add(_asmBuilder.Movzx(new Operand("rax"), new Operand("al")));
                     break;
 
-                //case SyntaxKind.GreaterThanToken:
-                //    break;
-                //case SyntaxKind.GreaterThanEqualsToken:
-                //    break; 
-                //case SyntaxKind.LessThanToken:
-                //    break; 
-                //case SyntaxKind.LessThanEqualsToken:
-                //    break; 
+                case LogicalOperatorKind.GreaterThan:
+                    instructions.Add(_asmBuilder.Cmp(new Operand("rax"), new Operand("rbx")));
+                    instructions.Add(_asmBuilder.Setg(new Operand("al")));
+                    instructions.Add(_asmBuilder.Movzx(new Operand("rax"), new Operand("al")));
+                    break;
+                case LogicalOperatorKind.GreaterThanOrEquals:
+                    instructions.Add(_asmBuilder.Cmp(new Operand("rax"), new Operand("rbx")));
+                    instructions.Add(_asmBuilder.Setge(new Operand("al")));
+                    instructions.Add(_asmBuilder.Movzx(new Operand("rax"), new Operand("al")));
+                    break;
+
+                case LogicalOperatorKind.LessThan:
+                    instructions.Add(_asmBuilder.Cmp(new Operand("rax"), new Operand("rbx")));
+                    instructions.Add(_asmBuilder.Setl(new Operand("al")));
+                    instructions.Add(_asmBuilder.Movzx(new Operand("rax"), new Operand("al")));
+                    break;
+                case LogicalOperatorKind.LessThanOrEquals:
+                    instructions.Add(_asmBuilder.Cmp(new Operand("rax"), new Operand("rbx")));
+                    instructions.Add(_asmBuilder.Setle(new Operand("al")));
+                    instructions.Add(_asmBuilder.Movzx(new Operand("rax"), new Operand("al")));
+                    break;
 
                 default:
-                    throw new NotImplementedException();
+                    throw new UnreachableException();
             }
 
             instructions.Add(_asmBuilder.Push(new Operand("rax")));
@@ -498,86 +504,79 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             return instructions;
         }
 
-        public List<Instruction> VisitLiteralExpression(LiteralExpressionSyntax literalExpressionSyntax, CodeScope scope)
+        public List<Instruction> VisitLiteralExpression(BoundLiteralExpression literalExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
-            var literalValue = literalExpressionSyntax.Value;
+            var literalValue = literalExpression.Value;
 
             switch (literalValue.Kind)
             {
-                case SyntaxKind.StringLiteralToken:
-                    var strTok = (SyntaxTokenWithValue<string>)literalValue;
-                    instructions.AddRange(_asmBuilderAbstractions.String(strTok.Value));
+                case ConstantValueKind.String:
+                    instructions.AddRange(_asmBuilderAbstractions.String(literalValue.StringValue!));
                     instructions.Add(_asmBuilder.Push(new Operand("rax")));
                     break;
-                case SyntaxKind.CharLiteralToken:
-                    var charTok = (SyntaxTokenWithValue<char>)literalValue;
-                    var valueTxt = $"'{charTok.Value}'";
+                case ConstantValueKind.Char:
+                    var valueTxt = $"'{literalValue.CharValue}'";
                     instructions.Add(_asmBuilder.Push(new Operand(valueTxt)));
                     break;
-                case SyntaxKind.IntLiteralToken:
-                    instructions.Add(_asmBuilder.Push(new Operand(((SyntaxTokenWithValue<int>)literalValue).Value.ToString())));
+                case ConstantValueKind.Int:
+                    instructions.Add(_asmBuilder.Push(new Operand((literalValue.IntValue.ToString()))));
                     break;
-                case SyntaxKind.LongLiteralToken:
-                    instructions.Add(_asmBuilder.Push(new Operand(((SyntaxTokenWithValue<long>)literalValue).Value.ToString())));
+                case ConstantValueKind.Long:
+                    instructions.Add(_asmBuilder.Push(new Operand((literalValue.LongValue.ToString()))));
                     break;
-                case SyntaxKind.FalseLiteralToken:
-                case SyntaxKind.FalseKeyword:
-                    instructions.Add(_asmBuilder.Push(new Operand("0")));
-                    break;
-                case SyntaxKind.TrueLiteralToken:
-                case SyntaxKind.TrueKeyword:
-                    instructions.Add(_asmBuilder.Push(new Operand("1")));
+                case ConstantValueKind.Bool:
+                    var num = literalValue.BoolValue == true ? 1 : 0;
+                    instructions.Add(_asmBuilder.Push(new Operand(num)));
                     break;
                 default:
                     throw new NotImplementedException();
-                    break;
             }
 
             return instructions;
         }
 
-        public List<Instruction> VisitMemberExpression(MemberExpressionSyntax memberExpressionSyntax, CodeScope scope)
+        public List<Instruction> VisitMemberExpression(BoundMemberExpression memberExpression, CodeScope scope)
         {
-            return VisitExpression(memberExpressionSyntax, scope);
+            return VisitExpression(memberExpression, scope);
         }
 
-        public List<Instruction> VisitUnaryExpression(UnaryExpressionSyntax unaryExpressionSyntax, CodeScope scope)
+        public List<Instruction> VisitUnaryExpression(BoundUnaryExpression unaryExpression, CodeScope scope)
         {
-            return VisitExpression(unaryExpressionSyntax, scope);
+            return VisitExpression(unaryExpression, scope);
         }
 
-        public List<Instruction> VisitCastExpression(CastExpressionSyntax castExpressionSyntax, CodeScope scope)
+        public List<Instruction> VisitCastExpression(BoundCastExpression castExpression, CodeScope scope)
         {
-            return VisitExpression(castExpressionSyntax.Value, scope);
+            return VisitExpression(castExpression.Value, scope);
         }   
         
-        public List<Instruction> VisitCallExpression(CallExpressionSyntax callExpressionSyntax, CodeScope scope)
+        public List<Instruction> VisitCallExpression(BoundCallExpression callExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
-            for (int i = callExpressionSyntax.Args.Count - 1; i >= 0; i--)
+            for (int i = callExpression.Args.Count - 1; i >= 0; i--)
             {
-                var arg = callExpressionSyntax.Args[i];
+                var arg = callExpression.Args[i];
 
                 var visited = VisitExpression(arg, scope);
                 instructions.AddRange(visited);
             }
 
-            instructions.Add(_asmBuilder.Call(new Operand(((IdentifierExpressionSyntax)callExpressionSyntax.Caller).Text)));
+            instructions.Add(_asmBuilder.Call(new Operand(((BoundIdentifierExpression)callExpression.Caller).Text)));
             instructions.Add(_asmBuilder.Push(new Operand("rax")));
 
             return instructions;
         }
 
-        public List<Instruction> VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpressionSyntax, CodeScope scope)
+        public List<Instruction> VisitAssignmentExpression(BoundAssignmentExpression assignmentExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
-            var location = VisitLocationExpression(assignmentExpressionSyntax.Left, scope);
+            var location = VisitLocationExpression(assignmentExpression.Left, scope);
 
-            instructions.AddRange(VisitExpression(assignmentExpressionSyntax.Right, scope));
+            instructions.AddRange(VisitExpression(assignmentExpression.Right, scope));
 
             instructions.Add(_asmBuilder.Pop(new Operand("rax")));
 
@@ -587,56 +586,56 @@ namespace JiteLang.Main.AsmBuilder.Visitor
         }
         #endregion Expressions
 
-        private List<Instruction> VisitDefaultBlock(SyntaxNode item, CodeScope scope, out bool isReturn)
+        private List<Instruction> VisitDefaultBlock(BoundNode item, CodeScope scope, out bool isReturn)
         {
             isReturn = false;
 
             switch (item.Kind)
             {
-                case SyntaxKind.VariableDeclaration:
-                    return VisitVariableDeclaration((VariableDeclarationSyntax)item, scope);
+                case BoundKind.VariableDeclaration:
+                    return VisitVariableDeclaration((BoundVariableDeclaration)item, scope);
 
-                case SyntaxKind.CallExpression:
-                    return VisitCallExpression((CallExpressionSyntax)item, scope);
+                case BoundKind.CallExpression:
+                    return VisitCallExpression((BoundCallExpression)item, scope);
 
-                case SyntaxKind.ReturnStatement:
+                case BoundKind.ReturnStatement:
                     isReturn = true;
-                    return VisitReturnStatement((ReturnStatementSyntax)item, scope);
+                    return VisitReturnStatement((BoundReturnStatement)item, scope);
 
-                case SyntaxKind.IfStatement:
-                    return VisitIfStatement((IfStatementSyntax)item, scope);
+                case BoundKind.IfStatement:
+                    return VisitIfStatement((BoundIfStatement)item, scope);
 
-                case SyntaxKind.WhileStatement:
-                    return VisitWhileStatement((WhileStatementSyntax)item, scope);
+                case BoundKind.WhileStatement:
+                    return VisitWhileStatement((BoundWhileStatement)item, scope);
 
-                case SyntaxKind.AssignmentExpression:
-                    return VisitAssignmentExpression((AssignmentExpressionSyntax)item, scope);
+                case BoundKind.AssignmentExpression:
+                    return VisitAssignmentExpression((BoundAssignmentExpression)item, scope);
 
                 default:
                     throw new UnreachableException();
             }
         }
 
-        private static string VisitLocationExpression(ExpressionSyntax expressionSyntax, CodeScope scope)
+        private static string VisitLocationExpression(BoundExpression expression, CodeScope scope)
         {
-            switch (expressionSyntax.Kind)
+            switch (expression.Kind)
             {
-                case SyntaxKind.MemberExpression:
-                    return GetMemberLocation((MemberExpressionSyntax)expressionSyntax, scope);
-                case SyntaxKind.IdentifierExpression:
-                    return GetIdentifierLocation((IdentifierExpressionSyntax)expressionSyntax, scope);
+                case BoundKind.MemberExpression:
+                    return GetMemberLocation((BoundMemberExpression)expression, scope);
+                case BoundKind.IdentifierExpression:
+                    return GetIdentifierLocation((BoundIdentifierExpression)expression, scope);
                 default:
                     throw new UnreachableException();
             }
 
-            static string GetIdentifierLocation(IdentifierExpressionSyntax identifier, CodeScope scope)
+            static string GetIdentifierLocation(BoundIdentifierExpression identifier, CodeScope scope)
             {
                 var location = scope.GetRbpPosStr(identifier.Text);
 
                 return location;
             }
 
-            static string GetMemberLocation(MemberExpressionSyntax member, CodeScope scope)
+            static string GetMemberLocation(BoundMemberExpression member, CodeScope scope)
             {
                 throw new NotImplementedException();
             }
