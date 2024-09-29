@@ -10,6 +10,7 @@ using JiteLang.Main.Bound.Statements.Declaration;
 using JiteLang.Main.Visitor.Type.Scope;
 using JiteLang.Syntax;
 using JiteLang.Main.Bound.TypeResolvers;
+using System.Collections.Frozen;
 
 namespace JiteLang.Main.Visitor.Type
 {
@@ -80,6 +81,9 @@ namespace JiteLang.Main.Visitor.Type
 
         public virtual void VisitClassDeclaration(BoundClassDeclaration classDeclaration, TypeScope scope)
         {
+            var methods = classDeclaration.Body.Members.Where(x => x.Kind == BoundKind.MethodDeclaration)
+               .Cast<BoundMethodDeclaration>().ToFrozenDictionary(k => k.Identifier.Text, v => CreateMethodScope(v, scope, VisitMethodParameter));
+
             var newScope = new TypeScope(scope);
             foreach (var item in classDeclaration.Body.Members)
             {
@@ -89,7 +93,10 @@ namespace JiteLang.Main.Visitor.Type
                         VisitClassDeclaration((BoundClassDeclaration)item, newScope);
                         break;
                     case BoundKind.MethodDeclaration:
-                        VisitMethodDeclaration((BoundMethodDeclaration)item, newScope);
+                        var method = (BoundMethodDeclaration)item;
+                        var methodScope = methods[method.Identifier.Text];
+
+                        VisitMethodDeclaration(method, methodScope);
                         break;
                     case BoundKind.VariableDeclaration:
                         VisitVariableDeclaration((BoundVariableDeclaration)item, newScope);
@@ -98,21 +105,28 @@ namespace JiteLang.Main.Visitor.Type
                         throw new UnreachableException();
                 }
             }
+
+            static TypeScope CreateMethodScope(BoundMethodDeclaration methodDeclaration, TypeScope scope, 
+                Func<BoundParameterDeclaration, TypeScope, TypeSymbol> visitMethodParameter) // make the methods scopeless
+            {
+                var newScope = new TypeScope(scope);
+
+                var @params = new Dictionary<string, TypeMethodParameter>();
+
+                foreach (var item in methodDeclaration.Params)
+                {
+                    var paramType = visitMethodParameter(item, newScope);
+                    @params.Add(item.Identifier.Text, new(paramType));
+                }
+
+                scope.AddMethod(methodDeclaration.Identifier.Text, methodDeclaration.ReturnType, @params);
+                return newScope;
+            }
         }
 
-        public virtual void VisitMethodDeclaration(BoundMethodDeclaration methodDeclaration, TypeScope scope)
+        public virtual void VisitMethodDeclaration(BoundMethodDeclaration methodDeclaration, TypeScope newScope)
         {
-            var newScope = new TypeScope(scope);
-
-            var @params = new Dictionary<string, TypeMethodParameter>();
-
-            foreach (var item in methodDeclaration.Params)
-            {
-                var paramType = VisitMethodParameter(item, newScope);
-                @params.Add(item.Identifier.Text, new(paramType));
-            }
-
-            scope.AddMethod(methodDeclaration.Identifier.Text, methodDeclaration.ReturnType, @params);
+            //the method scope is created in the visit class declaration to make it scopeless
 
             _currentMethod = methodDeclaration;
 

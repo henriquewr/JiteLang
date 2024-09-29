@@ -13,7 +13,7 @@ using JiteLang.Main.Bound.Expressions;
 using JiteLang.Main.Bound;
 using JiteLang.Main.Builder;
 using JiteLang.Main.Shared;
-using System.Linq.Expressions;
+using System.Collections.Frozen;
 
 namespace JiteLang.Main.AsmBuilder.Visitor
 {
@@ -42,6 +42,8 @@ namespace JiteLang.Main.AsmBuilder.Visitor
 
         private Instruction? _returnTo;
 
+        private const int MethodUpperStackInitialPos = 8; //skip return address
+
         public AsmBuilderVisitor(AssemblyBuilder asmBuilder, AssemblyBuilderAbstractions asmBuilderAbstractions)
         {
             _asmBuilder = asmBuilder;
@@ -63,31 +65,37 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             instructions.Add(_asmBuilder.Label(new Operand("_start")));
             instructions.Add(_asmBuilder.Call(new Operand("Main")));
 
-            var code = new Operand("rbx");
-            instructions.Add(_asmBuilder.Mov(code, new Operand("rax")));
+            var code = Operand.Rbx;
+            instructions.Add(_asmBuilder.Mov(code, Operand.Rax));
             instructions.AddRange(_asmBuilderAbstractions.Exit(code));
 
             return instructions;
         }
- 
+        
         public List<Instruction> VisitClassDeclaration(BoundClassDeclaration classDeclaration, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
             var newScope = new CodeScope(scope);
 
+            var methods = classDeclaration.Body.Members.Where(x => x.Kind == BoundKind.MethodDeclaration)
+                .Cast<BoundMethodDeclaration>().ToFrozenDictionary(k => k.Identifier.Text, v => CreateMethodScope(v, scope));
+
             foreach (var item in classDeclaration.Body.Members)
             {
                 switch (item.Kind)
                 {
-                    case BoundKind.ClassDeclaration:
-                        instructions.AddRange(VisitClassDeclaration((BoundClassDeclaration)item, newScope));
-                        break;
-                    case BoundKind.MethodDeclaration:
-                        instructions.AddRange(VisitMethodDeclaration((BoundMethodDeclaration)item, newScope));
-                        break;
                     case BoundKind.VariableDeclaration:
                         instructions.AddRange(VisitVariableDeclaration((BoundVariableDeclaration)item, newScope));
+                        break;
+                    case BoundKind.MethodDeclaration:
+                        var method = (BoundMethodDeclaration)item;
+                        var methodScope = methods[method.Identifier.Text];
+
+                        instructions.AddRange(VisitMethodDeclaration(method, methodScope));
+                        break;
+                    case BoundKind.ClassDeclaration:
+                        instructions.AddRange(VisitClassDeclaration((BoundClassDeclaration)item, newScope));
                         break;
                     default:
                         throw new UnreachableException();
@@ -95,35 +103,43 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             }
 
             return instructions;
+
+            static CodeScope CreateMethodScope(BoundMethodDeclaration methodDeclaration, CodeScope scope) // make the methods scopeless
+            {
+                var allocatedValue = methodDeclaration.Body.Members.Where(x => x.Kind == BoundKind.VariableDeclaration).Count() * 8;
+
+                CodeScope newScope = new(scope, allocatedValue)
+                {
+                    UpperStackPosition = MethodUpperStackInitialPos
+                };
+
+                Dictionary<string, CodeMethodParameter> methodParams = new();
+                foreach (var item in methodDeclaration.Params)
+                {
+                    methodParams.Add(item.Identifier.Text, new(item.Type));
+                }
+                scope.AddMethod(methodDeclaration.Identifier.Text, methodDeclaration.ReturnType, methodParams);
+
+                var upperStack = newScope.UpperStackPosition - MethodUpperStackInitialPos;
+                newScope.HasStackFrame = newScope.BytesAllocated != 0 || upperStack != 0;
+
+                return newScope;
+            }
         }
 
-        public List<Instruction> VisitMethodDeclaration(BoundMethodDeclaration methodDeclaration, CodeScope scope)
+        public List<Instruction> VisitMethodDeclaration(BoundMethodDeclaration methodDeclaration, CodeScope newScope)
         {
-            const int UpperInitialPos = 8; //skip return address
+            //the method scope is created in the visit class declaration to make it scopeless
 
             List<Instruction> instructions = new()
             {
                 _asmBuilder.Label(new Operand(methodDeclaration.Identifier.Text))
             };
 
-            var allocatedValue = methodDeclaration.Body.Members.Where(x => x.Kind == BoundKind.VariableDeclaration).Count() * 8;
-
-            CodeScope newScope = new(scope, allocatedValue)
-            {
-                UpperStackPosition = UpperInitialPos
-            };
-
-            Dictionary<string, CodeMethodParameter> methodParams = new();
             foreach (var item in methodDeclaration.Params)
             {
-                methodParams.Add(item.Identifier.Text, new(item.Type));
                 instructions.AddRange(VisitMethodParameter(item, newScope));
             }
-            scope.AddMethod(methodDeclaration.Identifier.Text, methodDeclaration.ReturnType, methodParams);
-
-            var upperStack = newScope.UpperStackPosition - UpperInitialPos;
-            newScope.HasStackFrame = newScope.BytesAllocated != 0 || upperStack != 0;
-
 
             var returnMethodLabel = new Operand(GenerateExitMethodLabel(methodDeclaration.Identifier.Text));
 
@@ -149,8 +165,10 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             {
                 instructions.Add(_asmBuilder.Label(returnMethodLabel));
             }
-            
-            instructions.Add(_asmBuilder.Ret(new Operand(upperStack.ToString())));
+
+            var upperStack = newScope.UpperStackPosition - MethodUpperStackInitialPos;
+            instructions.Add(_asmBuilder.Ret(new Operand(upperStack)));
+
             _returnTo = null;
             return instructions;
         }

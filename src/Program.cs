@@ -10,6 +10,7 @@ using JiteLang.Main.Visitor.Type;
 using JiteLang.Main.Visitor.Type.Scope;
 using JiteLang.Main.AsmBuilder.Scope;
 using JiteLang.Main.Bound;
+using System.IO;
 
 namespace JiteLang
 {
@@ -24,6 +25,7 @@ namespace Teste
     {
         public int Main()
         {
+            return Test();
             int test = 1;
 
             while(test <= 200)
@@ -33,6 +35,10 @@ namespace Teste
             }
 
             return test;
+        }
+        public int Test()
+        {
+            return 123;
         }
     }
 }
@@ -49,12 +55,12 @@ namespace Teste
             var parser = new Parser(lexed);
             var parsed = parser.Parse();
 
-            var jsonTeste = Newtonsoft.Json.JsonConvert.SerializeObject(parsed.Root);
-
             var builtNamespace = new Binder().BindNamespaceDeclaration(parsed.Root);
             var boundTree = new BoundSyntaxTree(builtNamespace, parsed.Errors);
 
             new TypeVisitor(boundTree.Errors).VisitNamespaceDeclaration(boundTree.Root, TypeScope.CreateGlobal());
+
+            var jsonTeste = Newtonsoft.Json.JsonConvert.SerializeObject(boundTree.Root);
 
             foreach (var error in boundTree.Errors)
             {
@@ -71,10 +77,13 @@ namespace Teste
             var asmBuilderVisitor = new AsmBuilderVisitor(asmBuilder, asmBuilderAbstractions);
             var intructions = asmBuilderVisitor.VisitNamespaceDeclaration(builtNamespace, CodeScope.CreateGlobal());
 
-            var optimized = Optimize(intructions);
+            var optimized = Optimize(intructions); //make it better
 
-            var asmEmiter = new AssemblyEmiter(Console.Out);
+            using StringWriter streamWriter = new();
+            var asmEmiter = new AssemblyEmiter(streamWriter); 
             asmEmiter.EmitInstructions(optimized);
+
+            Console.WriteLine(streamWriter.ToString());
         }
 
         static List<Instruction> Optimize(IList<Instruction> instructions)
@@ -92,6 +101,15 @@ namespace Teste
                     if(itemAsSingle.Operand.Value != nextAsSingle.Operand.Value)
                     {
                         optmiziedInstuctions.Add(new DoubleOperandInstruction(AsmInstructionType.Mov, nextAsSingle.Operand, itemAsSingle.Operand));
+                    }
+                }
+                if (item.Type is AsmInstructionType.Mov)
+                {
+                    var itemAsDouble = (DoubleOperandInstruction)item;
+
+                    if (itemAsDouble.Left.Value != itemAsDouble.Right.Value)
+                    {
+                        optmiziedInstuctions.Add(item);
                     }
                 }
                 else
