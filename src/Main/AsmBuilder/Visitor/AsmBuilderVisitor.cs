@@ -21,10 +21,10 @@ namespace JiteLang.Main.AsmBuilder.Visitor
         List<Instruction>,
         List<Instruction>,
         List<Instruction>,
-        (List<Instruction> Instructions, Operand Result),
-        (List<Instruction> Instructions, Operand Result),
         List<Instruction>,
-        (List<Instruction> Instructions, Operand Result),
+        List<Instruction>,
+        List<Instruction>,
+        List<Instruction>,
         List<Instruction>,
         CodeScope>
     {
@@ -189,12 +189,12 @@ namespace JiteLang.Main.AsmBuilder.Visitor
 
             if (variableDeclaration.InitialValue is not null)
             {
-                var visitedInitialValue = VisitExpression(variableDeclaration.InitialValue, scope);
-                instructions.AddRange(visitedInitialValue.Instructions);
+                instructions.AddRange(VisitExpression(variableDeclaration.InitialValue, scope));
+                instructions.Add(_asmBuilder.Pop(Operand.Rax));
 
-                var loc = scope.GetSizedRbpPosStr(variableDeclaration.Identifier.Text);
+                var loc = scope.GetRbpPosStr(variableDeclaration.Identifier.Text);
 
-                instructions.Add(_asmBuilder.Mov(new Operand(loc), visitedInitialValue.Result));
+                instructions.Add(_asmBuilder.Mov(new Operand(loc), Operand.Rax));
             }
 
             return instructions;
@@ -208,13 +208,12 @@ namespace JiteLang.Main.AsmBuilder.Visitor
 
             if (returnStatement.ReturnValue is not null)
             {
-                var visitedReturn = VisitExpression(returnStatement.ReturnValue, scope);
-                instructions.AddRange(visitedReturn.Instructions);
-
-                instructions.Add(_asmBuilder.Mov(Operand.Rax, visitedReturn.Result));
+                instructions.AddRange(VisitExpression(returnStatement.ReturnValue, scope));
             }
 
-            if(_returnTo is null)
+            instructions.Add(_asmBuilder.Pop(Operand.Rax));
+
+            if (_returnTo is null)
             {
                 throw new InvalidOperationException("No return defined"); // set in the VisitMethod
             }
@@ -228,9 +227,9 @@ namespace JiteLang.Main.AsmBuilder.Visitor
         {
             var instructions = new List<Instruction>();
 
-            var visitedCondition = VisitExpression(ifStatement.Condition, scope);
-            instructions.AddRange(visitedCondition.Instructions);
-            instructions.Add(_asmBuilder.Test(visitedCondition.Result, visitedCondition.Result));
+            instructions.AddRange(VisitExpression(ifStatement.Condition, scope));
+            instructions.Add(_asmBuilder.Pop(Operand.Rax));
+            instructions.Add(_asmBuilder.Test(Operand.Rax, Operand.Rax));
 
             var toElseLabelOperand = new Operand(GenerateIfLabel(ELSE_PREFIX));
             var endIfLabelOperand = new Operand(GenerateIfLabel(ENDIF_PREFIX));
@@ -324,10 +323,9 @@ namespace JiteLang.Main.AsmBuilder.Visitor
 
             instructions.Add(_asmBuilder.Label(whileStartLabelOp));
 
-            var visitedCondition = VisitExpression(whileStatement.Condition, scope);
-            instructions.AddRange(visitedCondition.Instructions);
-
-            instructions.Add(_asmBuilder.Test(visitedCondition.Result, visitedCondition.Result));
+            instructions.AddRange(VisitExpression(whileStatement.Condition, scope));
+            instructions.Add(_asmBuilder.Pop(Operand.Rax));
+            instructions.Add(_asmBuilder.Test(Operand.Rax, Operand.Rax));
 
             instructions.Add(_asmBuilder.Je(whileEndLabelOp));
 
@@ -366,7 +364,7 @@ namespace JiteLang.Main.AsmBuilder.Visitor
         #endregion Statements
 
         #region Expressions
-        public (List<Instruction> Instructions, Operand Result) VisitExpression(BoundExpression expression, CodeScope scope)
+        public List<Instruction> VisitExpression(BoundExpression expression, CodeScope scope)
         {
             var expressionInstructions = expression.Kind switch
             {
@@ -385,18 +383,18 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             return expressionInstructions;
         }
 
-        public (List<Instruction> Instructions, Operand Result) VisitBinaryExpression(BoundBinaryExpression binaryExpression, CodeScope scope)
+        public List<Instruction> VisitBinaryExpression(BoundBinaryExpression binaryExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
-            var visitedLeft = VisitExpression(binaryExpression.Left, scope);
-            var visitedRight = VisitExpression(binaryExpression.Right, scope);
+            instructions.AddRange(VisitExpression(binaryExpression.Left, scope));
+            instructions.AddRange(VisitExpression(binaryExpression.Right, scope));
 
-            instructions.AddRange(visitedLeft.Instructions);
-            instructions.AddRange(visitedRight.Instructions);
+            var rightOperand = Operand.Rbx;
+            var leftOperand = Operand.Rax;
 
-            var rightOperand = visitedRight.Result;
-            var leftOperand = visitedLeft.Result;
+            instructions.Add(_asmBuilder.Pop(rightOperand));
+            instructions.Add(_asmBuilder.Pop(leftOperand));
 
             var operation = binaryExpression.Operation;
 
@@ -443,31 +441,35 @@ namespace JiteLang.Main.AsmBuilder.Visitor
                     throw new UnreachableException();
             }
 
-            return (instructions, resultIsIn);
+            instructions.Add(_asmBuilder.Push(resultIsIn));
+
+            return instructions;
         }
      
-        public (List<Instruction> Instructions, Operand Result) VisitIdentifierExpression(BoundIdentifierExpression identifierExpression, CodeScope scope)
+        public List<Instruction> VisitIdentifierExpression(BoundIdentifierExpression identifierExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>
             {
                 _asmBuilder.Mov(Operand.Rax, new Operand(scope.GetRbpPosStr(identifierExpression.Text))),
+                _asmBuilder.Push(Operand.Rax),
             };
 
-            return (instructions, Operand.Rax);
+            return instructions;
         }
 
-        public (List<Instruction> Instructions, Operand Result) VisitLogicalExpression(BoundLogicalExpression logicalExpression, CodeScope scope)
+        public List<Instruction> VisitLogicalExpression(BoundLogicalExpression logicalExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
-            var visitedLeft = VisitExpression(logicalExpression.Left, scope);
-            var visitedRight = VisitExpression(logicalExpression.Right, scope);
 
-            instructions.AddRange(visitedLeft.Instructions);
-            instructions.AddRange(visitedRight.Instructions);
+            instructions.AddRange(VisitExpression(logicalExpression.Left, scope));
+            instructions.AddRange(VisitExpression(logicalExpression.Right, scope));
 
-            var rightOperand = visitedRight.Result;
-            var leftOperand = visitedLeft.Result;
+            var rightOperand = Operand.Rbx;
+            var leftOperand = Operand.Rax;
+
+            instructions.Add(_asmBuilder.Pop(rightOperand));
+            instructions.Add(_asmBuilder.Pop(leftOperand));
 
             var operation = logicalExpression.Operation;
 
@@ -517,60 +519,64 @@ namespace JiteLang.Main.AsmBuilder.Visitor
                     throw new UnreachableException();
             }
 
-            return (instructions, leftOperand);
+            instructions.Add(_asmBuilder.Push(leftOperand));
+
+            return instructions;
         }
 
-        public (List<Instruction> Instructions, Operand Result) VisitLiteralExpression(BoundLiteralExpression literalExpression, CodeScope scope)
+        public List<Instruction> VisitLiteralExpression(BoundLiteralExpression literalExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
             var literalValue = literalExpression.Value;
 
-            Operand returnOperand;
+            Operand operand;
 
             switch (literalValue.Kind)
             {
                 case ConstantValueKind.String:
                     instructions.AddRange(_asmBuilderAbstractions.String(literalValue.StringValue!));
-                    returnOperand = Operand.Rax;
+                    operand = Operand.Rax;
                     break;
                 case ConstantValueKind.Char:
                     var valueTxt = $"'{literalValue.CharValue}'";
-                    returnOperand = new Operand(valueTxt);
+                    operand = new Operand(valueTxt);
                     break;
                 case ConstantValueKind.Int:
-                    returnOperand = new Operand(literalValue.IntValue.ToString());
+                    operand = new Operand(literalValue.IntValue.ToString());
                     break;
                 case ConstantValueKind.Long:
-                    returnOperand = new Operand(literalValue.LongValue.ToString());
+                    operand = new Operand(literalValue.LongValue.ToString());
                     break;
                 case ConstantValueKind.Bool:
                     var num = literalValue.BoolValue == true ? 1 : 0;
-                    returnOperand = new Operand(num);
+                    operand = new Operand(num);
                     break;
                 default:
                     throw new NotImplementedException();
             }
 
-            return (instructions, returnOperand);
+            instructions.Add(_asmBuilder.Push(operand));
+
+            return instructions;
         }
 
-        public (List<Instruction> Instructions, Operand Result) VisitMemberExpression(BoundMemberExpression memberExpression, CodeScope scope)
+        public List<Instruction> VisitMemberExpression(BoundMemberExpression memberExpression, CodeScope scope)
         {
             return VisitExpression(memberExpression, scope);
         }
 
-        public (List<Instruction> Instructions, Operand Result) VisitUnaryExpression(BoundUnaryExpression unaryExpression, CodeScope scope)
+        public List<Instruction> VisitUnaryExpression(BoundUnaryExpression unaryExpression, CodeScope scope)
         {
             return VisitExpression(unaryExpression, scope);
         }
 
-        public (List<Instruction> Instructions, Operand Result) VisitCastExpression(BoundCastExpression castExpression, CodeScope scope)
+        public List<Instruction> VisitCastExpression(BoundCastExpression castExpression, CodeScope scope)
         {
             return VisitExpression(castExpression.Value, scope);
         }   
         
-        public (List<Instruction> Instructions, Operand Result) VisitCallExpression(BoundCallExpression callExpression, CodeScope scope)
+        public List<Instruction> VisitCallExpression(BoundCallExpression callExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
@@ -579,31 +585,27 @@ namespace JiteLang.Main.AsmBuilder.Visitor
                 var arg = callExpression.Args[i];
 
                 var visited = VisitExpression(arg, scope);
-                instructions.Add(_asmBuilder.Push(visited.Result));
-
-                instructions.AddRange(visited.Instructions);
+                instructions.AddRange(visited);
             }
 
             instructions.Add(_asmBuilder.Call(new Operand(((BoundIdentifierExpression)callExpression.Caller).Text)));
 
-            return (instructions, Operand.Rax);
+            return instructions;
         }
 
-        public (List<Instruction> Instructions, Operand Result) VisitAssignmentExpression(BoundAssignmentExpression assignmentExpression, CodeScope scope)
+        public List<Instruction> VisitAssignmentExpression(BoundAssignmentExpression assignmentExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
 
             var location = VisitLocationExpression(assignmentExpression.Left, scope);
 
-            var visitedRight = VisitExpression(assignmentExpression.Right, scope);
-            instructions.AddRange(visitedRight.Instructions);
-
-            var resultOperand = visitedRight.Result;
+            instructions.AddRange(VisitExpression(assignmentExpression.Right, scope));
+            instructions.Add(_asmBuilder.Pop(Operand.Rax));
 
             var locationOperand = new Operand(location);
-            instructions.Add(_asmBuilder.Mov(locationOperand, resultOperand));
+            instructions.Add(_asmBuilder.Mov(locationOperand, Operand.Rax));
 
-            return (instructions, locationOperand);
+            return instructions;
         }
         #endregion Expressions
 
@@ -617,7 +619,7 @@ namespace JiteLang.Main.AsmBuilder.Visitor
                     return VisitVariableDeclaration((BoundVariableDeclaration)item, scope);
 
                 case BoundKind.CallExpression:
-                    return VisitCallExpression((BoundCallExpression)item, scope).Instructions;
+                    return VisitCallExpression((BoundCallExpression)item, scope);
 
                 case BoundKind.ReturnStatement:
                     isReturn = true;
@@ -630,7 +632,7 @@ namespace JiteLang.Main.AsmBuilder.Visitor
                     return VisitWhileStatement((BoundWhileStatement)item, scope);
 
                 case BoundKind.AssignmentExpression:
-                    return VisitAssignmentExpression((BoundAssignmentExpression)item, scope).Instructions;
+                    return VisitAssignmentExpression((BoundAssignmentExpression)item, scope);
 
                 default:
                     throw new UnreachableException();

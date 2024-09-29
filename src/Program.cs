@@ -25,11 +25,8 @@ namespace Teste
     {
         public int Main()
         {
-            return Test(2);
-        }
-        public int Test(int a)
-        {
-            return a + 123;
+            int a = 1 * 2 + 10 / 2;
+            return a;
         }
     }
 }
@@ -94,7 +91,7 @@ namespace Teste
                         optmiziedInstuctions.Add(new DoubleOperandInstruction(AsmInstructionType.Mov, nextAsSingle.Operand, itemAsSingle.Operand));
                     }
                 }
-                if (item.Type is AsmInstructionType.Mov)
+                else if (item.Type is AsmInstructionType.Mov)
                 {
                     var itemAsDouble = (DoubleOperandInstruction)item;
 
