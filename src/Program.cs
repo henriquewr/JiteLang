@@ -25,20 +25,11 @@ namespace Teste
     {
         public int Main()
         {
-            return Test();
-            int test = 1;
-
-            while(test <= 200)
-            {
-                test = test + 1;
-                return test;
-            }
-
-            return test;
+            return Test(2);
         }
-        public int Test()
+        public int Test(int a)
         {
-            return 123;
+            return a + 123;
         }
     }
 }

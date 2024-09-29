@@ -120,9 +120,6 @@ namespace JiteLang.Main.AsmBuilder.Visitor
                 }
                 scope.AddMethod(methodDeclaration.Identifier.Text, methodDeclaration.ReturnType, methodParams);
 
-                var upperStack = newScope.UpperStackPosition - MethodUpperStackInitialPos;
-                newScope.HasStackFrame = newScope.BytesAllocated != 0 || upperStack != 0;
-
                 return newScope;
             }
         }
@@ -140,6 +137,9 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             {
                 instructions.AddRange(VisitMethodParameter(item, newScope));
             }
+
+            var upperStack = newScope.UpperStackPosition - MethodUpperStackInitialPos;
+            newScope.HasStackFrame = newScope.BytesAllocated != 0 || upperStack != 0;
 
             var returnMethodLabel = new Operand(GenerateExitMethodLabel(methodDeclaration.Identifier.Text));
 
@@ -166,7 +166,6 @@ namespace JiteLang.Main.AsmBuilder.Visitor
                 instructions.Add(_asmBuilder.Label(returnMethodLabel));
             }
 
-            var upperStack = newScope.UpperStackPosition - MethodUpperStackInitialPos;
             instructions.Add(_asmBuilder.Ret(new Operand(upperStack)));
 
             _returnTo = null;
