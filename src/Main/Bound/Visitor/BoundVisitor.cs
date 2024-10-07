@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using JiteLang.Main.Builder;
 using JiteLang.Main.Bound.Expressions;
 using JiteLang.Main.Bound.Statements;
 using JiteLang.Main.Bound.Statements.Declaration;

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JiteLang.Main.Builder.Instructions
+namespace JiteLang.Main.AsmBuilder.Instructions
 {
     internal abstract class Instruction
     {

@@ -18,7 +18,7 @@ namespace JiteLang.Main.Bound
         {
             Kind = predefinedTypeKind;
         }
-         
+
         public readonly PredefinedTypeKind Kind;
         public static readonly PredefinedTypeSymbol Int = new(SyntaxFacts.Int, PredefinedTypeKind.Int);
         public static readonly PredefinedTypeSymbol Void = new(SyntaxFacts.Void, PredefinedTypeKind.Void);

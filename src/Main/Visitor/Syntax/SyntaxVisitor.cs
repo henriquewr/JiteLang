@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using JiteLang.Main.AsmBuilder.Scope;
+using JiteLang.Main.LangParser.SyntaxNodes;
 using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
-using JiteLang.Main.LangParser.SyntaxTree;
-using JiteLang.Main.Shared;
 using JiteLang.Syntax;
 
 namespace JiteLang.Main.Visitor.Syntax

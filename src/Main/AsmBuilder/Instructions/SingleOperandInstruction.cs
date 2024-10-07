@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using JiteLang.Main.Builder.Operands;
+using JiteLang.Main.AsmBuilder.Operands;
 
-namespace JiteLang.Main.Builder.Instructions
+namespace JiteLang.Main.AsmBuilder.Instructions
 {
     internal class SingleOperandInstruction : Instruction
     {

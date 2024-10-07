@@ -147,6 +147,8 @@ namespace JiteLang.Syntax
         ElseKeyword = 3016,
         /// <summary><c> while </c></summary>
         WhileKeyword = 3017,
+        /// <summary><c> extern </c></summary>
+        ExternKeyword = 3018,
 
 
         //Declarations: 4000 -> 5000

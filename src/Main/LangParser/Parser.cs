@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using JiteLang.Main.LangLexer.Token;
 using JiteLang.Main.LangParser.SyntaxNodes;
@@ -65,6 +66,21 @@ namespace JiteLang.Main.LangParser
         private bool Expect(SyntaxKind tokenKind, string errorMessage)
         {
             return Expect(tokenKind, out _, errorMessage);
+        }
+
+        private bool AdvanceIf(Func<TokenInfo, bool> advanceFunc, out TokenInfo token)
+        {
+            _tokens.PeekNext(out token);
+
+            var advance = advanceFunc(token);
+
+            if (advance)
+            {
+                _tokens.Advance();
+                return true;
+            }
+
+            return false;
         }
 
         private bool AdvanceIfIs(SyntaxKind tokenKind, out TokenInfo token)
@@ -194,11 +210,19 @@ namespace JiteLang.Main.LangParser
             }
         }
 
-        private SyntaxToken ParseModifiers()
+        private List<SyntaxToken> ParseModifiers()
         {
-            Expect(token => SyntaxFacts.IsAccessModifier(token.Kind), out var token, "Expected modifier");
+            var modifiers = new List<SyntaxToken>();
+            Expect(token => SyntaxFacts.IsAccessModifier(token.Kind), out var token, "Expected acess modifier");
+            modifiers.Add(SyntaxFactory.Token(token));
 
-            return SyntaxFactory.Token(token);
+            while (SyntaxFacts.IsModifier(_tokens.Current.Kind))
+            {
+                modifiers.Add(SyntaxFactory.Token(_tokens.Current));
+                _tokens.Advance();
+            }
+
+            return modifiers;
         }
 
         private SyntaxNode ParseMethodOrVariableDeclaration()
@@ -209,30 +233,38 @@ namespace JiteLang.Main.LangParser
 
             if(token.Kind == SyntaxKind.OpenParenToken)
             {
-                var methodDeclaration = ParseMethodDeclaration();
-                methodDeclaration.Modifiers.Add(modifiers);
+                var methodDeclaration = ParseMethodDeclaration(modifiers);
                 return methodDeclaration;
             }
             else
             {
                 var varDeclaration = ParsePredefinedTypeVarDeclaration();
-                varDeclaration.Modifiers.Add(modifiers);
+                varDeclaration.Modifiers.AddRange(modifiers);
                 return varDeclaration;
             }
         }
 
-        private MethodDeclarationSyntax ParseMethodDeclaration()
+        private MethodDeclarationSyntax ParseMethodDeclaration(List<SyntaxToken> modifiers)
         {
             _tokens.Advance(out var returnType);
             Expect(SyntaxKind.IdentifierToken, out var methodIdentifier, "Expected identifier name");
 
             var returnTypeSyntax = SyntaxFactory.PredefinedType(returnType);
             var identifier = SyntaxFactory.Identifier(methodIdentifier);
-            MethodDeclarationSyntax methodDeclaration = new(identifier, returnTypeSyntax);
+            MethodDeclarationSyntax methodDeclaration = new(identifier, returnTypeSyntax, modifiers);
 
             methodDeclaration.Params = ParseMethodParams();
 
-            methodDeclaration.Body = ParseBlockStatement<SyntaxNode>(ParseDefaultMembers);
+            var isExtern = methodDeclaration.Modifiers.Any(x => x.Kind == SyntaxKind.ExternKeyword);
+
+            if (isExtern) //Extern methods cannot have a body
+            {
+                Expect(SyntaxKind.SemiColon, "Extern method declaration must end with semicolon");
+            }
+            else
+            {
+                methodDeclaration.Body = ParseBlockStatement<SyntaxNode>(ParseDefaultMembers);
+            }
 
             return methodDeclaration;
         }

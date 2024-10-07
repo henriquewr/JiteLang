@@ -1,12 +1,10 @@
-﻿using JiteLang.Main.Builder.Instructions;
-using JiteLang.Main.Builder.Operands;
+﻿using JiteLang.Main.AsmBuilder.Instructions;
+using JiteLang.Main.AsmBuilder.Operands;
 
-namespace JiteLang.Main.Builder.AsmBuilder
+namespace JiteLang.Main.AsmBuilder.Builder
 {
     internal partial class AssemblyBuilder
     {
-        public AssemblyBuilder() { }
-
         public SingleOperandInstruction Push(Operand pushTo)
         {
             var push = new SingleOperandInstruction(AsmInstructionType.Push, pushTo);

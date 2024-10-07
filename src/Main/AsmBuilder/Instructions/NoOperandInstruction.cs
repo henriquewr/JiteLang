@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JiteLang.Main.Builder.Instructions
+namespace JiteLang.Main.AsmBuilder.Instructions
 {
     internal class NoOperandInstruction : Instruction
     {
-        public NoOperandInstruction(AsmInstructionType type) 
+        public NoOperandInstruction(AsmInstructionType type)
         {
             Type = type;
         }

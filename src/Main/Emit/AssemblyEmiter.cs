@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using JiteLang.Main.Builder.Instructions;
+using JiteLang.Main.AsmBuilder.Instructions;
 
 namespace JiteLang.Main.Emit
 {

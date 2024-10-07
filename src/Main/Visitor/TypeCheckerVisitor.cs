@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
-using JiteLang.Main.LangParser.SyntaxTree;
 using JiteLang.Main.LangParser.Types;
 using JiteLang.Main.LangParser.Types.Predefined;
 using JiteLang.Main.Visitor.Syntax;
 using JiteLang.Main.Visitor.Type;
 using JiteLang.Syntax;
+using JiteLang.Main.LangParser.SyntaxNodes;
 
 namespace JiteLang.Main.Visitor
 {

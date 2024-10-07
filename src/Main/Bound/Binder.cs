@@ -1,22 +1,16 @@
-﻿using JiteLang.Main.Builder;
-using JiteLang.Main.Bound.Expressions;
+﻿using JiteLang.Main.Bound.Expressions;
 using JiteLang.Main.Bound.Statements;
 using JiteLang.Main.Bound.Statements.Declaration;
 using JiteLang.Main.LangParser.SyntaxNodes;
 using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
-using JiteLang.Main.LangParser.SyntaxTree;
 using JiteLang.Main.LangParser.Types;
 using JiteLang.Main.Shared;
 using JiteLang.Syntax;
 using System;
 using System.Diagnostics;
 using System.Linq;
-using JiteLang.Main.AsmBuilder.Scope;
-using JiteLang.Main.Builder.Instructions;
-using static System.Formats.Asn1.AsnWriter;
-using System.Collections.Generic;
 
 namespace JiteLang.Main.Bound
 {

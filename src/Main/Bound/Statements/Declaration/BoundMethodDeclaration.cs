@@ -1,11 +1,9 @@
-﻿using JiteLang.Main.Bound;
-using JiteLang.Main.Bound.Statements.Declaration;
-using JiteLang.Main.Bound.Statements;
-using JiteLang.Main.Bound.Expressions;
+﻿using JiteLang.Main.Bound.Expressions;
 using JiteLang.Main.LangParser.SyntaxNodes;
+using JiteLang.Main.PredefinedExternMethods;
 using System.Collections.Generic;
 
-namespace JiteLang.Main.Builder
+namespace JiteLang.Main.Bound.Statements.Declaration
 {
     internal class BoundMethodDeclaration : BoundDeclaration
     {
@@ -13,7 +11,7 @@ namespace JiteLang.Main.Builder
 
         public BoundMethodDeclaration(BoundIdentifierExpression identifierExpression,
             TypeSymbol returnType,
-            BoundBlockStatement<BoundNode> body, 
+            BoundBlockStatement<BoundNode> body,
             List<SyntaxToken> modifiers,
             List<BoundParameterDeclaration> @params
             ) : base(identifierExpression)
@@ -37,7 +35,7 @@ namespace JiteLang.Main.Builder
         {
         }
 
-        public BoundMethodDeclaration(BoundIdentifierExpression identifierExpression) 
+        public BoundMethodDeclaration(BoundIdentifierExpression identifierExpression)
             : this(identifierExpression, PredefinedTypeSymbol.Void, new())
         {
         }

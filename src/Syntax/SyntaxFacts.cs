@@ -5,6 +5,7 @@ namespace JiteLang.Syntax
     {
         public const string Public = "public";
         public const string Private = "private";
+        public const string Extern = "extern";
 
         public const string Int = "int";
         public const string String = "string";
@@ -53,6 +54,17 @@ namespace JiteLang.Syntax
             {
                 case SyntaxKind.PublicKeyword:
                 case SyntaxKind.PrivateKeyword:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsModifier(SyntaxKind kind) //the name IsModifier is very generic...
+        {
+            switch (kind)
+            {
+                case SyntaxKind.ExternKeyword:
                     return true;
                 default:
                     return false;
@@ -122,7 +134,10 @@ namespace JiteLang.Syntax
                 case Public:
                     return SyntaxKind.PublicKeyword;
                 case Private:
-                    return SyntaxKind.PrivateKeyword;
+                    return SyntaxKind.PrivateKeyword;              
+                
+                case Extern:
+                    return SyntaxKind.ExternKeyword;
 
                 case Return:
                     return SyntaxKind.ReturnKeyword;
@@ -184,7 +199,10 @@ namespace JiteLang.Syntax
                 case SyntaxKind.PublicKeyword:
                     return Public;
                 case SyntaxKind.PrivateKeyword:
-                    return Private;
+                    return Private;        
+                
+                case SyntaxKind.ExternKeyword:
+                    return Extern;
 
                 case SyntaxKind.NamespaceKeyword:
                     return Namespace;

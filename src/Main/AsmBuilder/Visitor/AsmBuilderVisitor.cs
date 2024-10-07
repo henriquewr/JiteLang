@@ -1,9 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using JiteLang.Main.Builder.Instructions;
-using JiteLang.Main.Builder.AsmBuilder;
 using System;
-using JiteLang.Main.Builder.Operands;
 using System.Linq;
 using JiteLang.Main.AsmBuilder.Scope;
 using JiteLang.Main.Bound.Visitor;
@@ -11,9 +8,12 @@ using JiteLang.Main.Bound.Statements.Declaration;
 using JiteLang.Main.Bound.Statements;
 using JiteLang.Main.Bound.Expressions;
 using JiteLang.Main.Bound;
-using JiteLang.Main.Builder;
 using JiteLang.Main.Shared;
 using System.Collections.Frozen;
+using JiteLang.Main.AsmBuilder.Builder;
+using JiteLang.Main.AsmBuilder.Instructions;
+using JiteLang.Main.AsmBuilder.Operands;
+using JiteLang.Main.PredefinedExternMethods;
 
 namespace JiteLang.Main.AsmBuilder.Visitor
 {
@@ -28,6 +28,7 @@ namespace JiteLang.Main.AsmBuilder.Visitor
         List<Instruction>,
         CodeScope>
     {
+
         private readonly AssemblyBuilder _asmBuilder;
         private readonly AssemblyBuilderAbstractions _asmBuilderAbstractions;
 
@@ -124,9 +125,45 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             }
         }
 
+        private List<Instruction> VisitExternMethodDeclaration(BoundMethodDeclaration methodDeclaration, CodeScope newScope)
+        {
+            //the method scope is created in the visit class declaration to make it scopeless
+            var instructions = new List<Instruction>();
+
+            switch (methodDeclaration.Identifier.Text)
+            {
+                case Method_Print.C_Name:
+
+                    foreach (var item in methodDeclaration.Params)
+                    {
+                        instructions.AddRange(VisitMethodParameter(item, newScope));
+                    }
+
+                    var strVar = newScope.Variables.First();
+
+                    var pointerLocation = newScope.GetSizedRbpPosStr(strVar.Key);
+                    newScope.GetVariable(strVar.Key, out int offset);
+
+                    var lengthOperand = new Operand($"[rsi - {8}]");
+
+                    var printInstructions = Method_Print.GenerateInstructions(_asmBuilder, new Operand(pointerLocation), lengthOperand);
+                    instructions.AddRange(printInstructions);
+
+                    return instructions;
+
+                default:
+                    throw new UnreachableException();
+            }
+        }
+
         public List<Instruction> VisitMethodDeclaration(BoundMethodDeclaration methodDeclaration, CodeScope newScope)
         {
             //the method scope is created in the visit class declaration to make it scopeless
+
+            if (methodDeclaration.Modifiers.Any(x => x.Kind == Syntax.SyntaxKind.ExternKeyword))
+            {
+                return VisitExternMethodDeclaration(methodDeclaration, newScope);
+            }
 
             List<Instruction> instructions = new()
             {
@@ -448,6 +485,8 @@ namespace JiteLang.Main.AsmBuilder.Visitor
      
         public List<Instruction> VisitIdentifierExpression(BoundIdentifierExpression identifierExpression, CodeScope scope)
         {
+            var variable = scope.GetVariable(identifierExpression.Text);
+
             var instructions = new List<Instruction>
             {
                 _asmBuilder.Mov(Operand.Rax, new Operand(scope.GetRbpPosStr(identifierExpression.Text))),
@@ -460,7 +499,6 @@ namespace JiteLang.Main.AsmBuilder.Visitor
         public List<Instruction> VisitLogicalExpression(BoundLogicalExpression logicalExpression, CodeScope scope)
         {
             var instructions = new List<Instruction>();
-
 
             instructions.AddRange(VisitExpression(logicalExpression.Left, scope));
             instructions.AddRange(VisitExpression(logicalExpression.Right, scope));
@@ -535,7 +573,8 @@ namespace JiteLang.Main.AsmBuilder.Visitor
             switch (literalValue.Kind)
             {
                 case ConstantValueKind.String:
-                    instructions.AddRange(_asmBuilderAbstractions.String(literalValue.StringValue!));
+                    var stringValue = literalValue.StringValue!;
+                    instructions.AddRange(_asmBuilderAbstractions.String(stringValue));
                     operand = Operand.Rax;
                     break;
                 case ConstantValueKind.Char:

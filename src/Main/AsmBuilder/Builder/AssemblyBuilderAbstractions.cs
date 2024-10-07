@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using JiteLang.Main.Builder.Instructions;
-using JiteLang.Main.Builder.Operands;
+using JiteLang.Main.AsmBuilder.Instructions;
+using JiteLang.Main.AsmBuilder.Operands;
 
-namespace JiteLang.Main.Builder.AsmBuilder
+namespace JiteLang.Main.AsmBuilder.Builder
 {
     internal class AssemblyBuilderAbstractions
     {
@@ -19,22 +19,28 @@ namespace JiteLang.Main.Builder.AsmBuilder
         {
             //this function does not work for strange chars (alt + 1 for example)
 
-            var length = str.Length + 1; //string length + null terminator
+            const int MetadataLength = 8;
+
+            var strLength = str.Length + 1; //string strLength + null terminator
 
             var instructions = new List<Instruction>
             {
-                _asmBuilder.Mov(new Operand("rdi"), new Operand("0")),        // address
-                _asmBuilder.Mov(new Operand("rsi"), new Operand(length)),     // memory length
-                _asmBuilder.Mov(Operand.Rdx, new Operand("0x3")),             // PROT_READ | PROT_WRITE
-                _asmBuilder.Mov(new Operand("r10"), new Operand("0x22")),     // MAP_PRIVATE | MAP_ANONYMOUS
-                _asmBuilder.Mov(new Operand("r8"), new Operand("0")),         // File descriptor
-                _asmBuilder.Mov(new Operand("r9"), new Operand("0")),         // Offset 
-                _asmBuilder.Mov(Operand.Rax, new Operand("9")),               // mmap
+                _asmBuilder.Mov(Operand.Rdi, new Operand("0")),                        // address
+                _asmBuilder.Mov(Operand.Rsi, new Operand(strLength + MetadataLength)), // memory strLength
+                _asmBuilder.Mov(Operand.Rdx, new Operand("0x3")),                      // PROT_READ | PROT_WRITE
+                _asmBuilder.Mov(Operand.R10, new Operand("0x22")),                     // MAP_PRIVATE | MAP_ANONYMOUS
+                _asmBuilder.Mov(Operand.R8, new Operand("0")),                         // File descriptor
+                _asmBuilder.Mov(Operand.R9, new Operand("0")),                         // Offset 
+                _asmBuilder.Mov(Operand.Rax, new Operand("9")),                        // mmap
                 _asmBuilder.Syscall(),
+
+
+                _asmBuilder.Mov(new Operand($"qword [rax]"), new Operand(strLength)),
+                _asmBuilder.Add(Operand.Rax, new Operand(MetadataLength))
             };
 
             int i = 0;
-            int lengthAligned = (str.Length / 8) * 8;
+            int lengthAligned = str.Length / 8 * 8;
 
             var bytes = Encoding.UTF8.GetBytes(str);
             for (; i < lengthAligned; i += 8)

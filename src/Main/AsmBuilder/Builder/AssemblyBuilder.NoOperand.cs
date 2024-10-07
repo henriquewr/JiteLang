@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using JiteLang.Main.Builder.Instructions;
+﻿using JiteLang.Main.AsmBuilder.Instructions;
 
-namespace JiteLang.Main.Builder.AsmBuilder
+namespace JiteLang.Main.AsmBuilder.Builder
 {
     internal partial class AssemblyBuilder
     {

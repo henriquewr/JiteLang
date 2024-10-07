@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using JiteLang.Main.Builder;
 using JiteLang.Main.Bound;
 using JiteLang.Main.Bound.Expressions;
 using JiteLang.Main.Bound.Statements;
@@ -11,6 +10,7 @@ using JiteLang.Main.Visitor.Type.Scope;
 using JiteLang.Syntax;
 using JiteLang.Main.Bound.TypeResolvers;
 using System.Collections.Frozen;
+using JiteLang.Main.PredefinedExternMethods;
 
 namespace JiteLang.Main.Visitor.Type
 {
@@ -124,15 +124,65 @@ namespace JiteLang.Main.Visitor.Type
             }
         }
 
+        private void VisitExternMethodDeclaration(BoundMethodDeclaration methodDeclaration, TypeScope newScope)
+        {
+            var predefinedExternMethod = PredefinedExternMethodResolver.Resolve(methodDeclaration.Identifier.Text);
+
+            if (predefinedExternMethod is null)
+            {
+                AddError($"The extern method '{methodDeclaration.Identifier.Text}' does not exists", methodDeclaration.Identifier.Position);
+            }
+            else 
+            {
+                var isSameReturnType = methodDeclaration.ReturnType.IsEqualsNotNone(predefinedExternMethod.ReturnType);
+                if (!isSameReturnType)
+                {
+                    AddError($"The extern method '{methodDeclaration.Identifier.Text}' must returns '{predefinedExternMethod.ReturnType.Text}'", methodDeclaration.Identifier.Position);
+                }
+
+                var paramsTypes = methodDeclaration.Params.Select(x => x.Type);
+                var paramsAreEquals = paramsTypes.SequenceEqual(predefinedExternMethod.ParamsTypes);
+
+                if (methodDeclaration.Params.Count != predefinedExternMethod.ParamsTypes.Count)
+                {
+                    AddError($"Expected {predefinedExternMethod.ParamsTypes.Count} parameters, but got {methodDeclaration.Params.Count}", methodDeclaration.Identifier.Position);
+                }
+                else
+                {
+                    for (int i = 0; i < predefinedExternMethod.ParamsTypes.Count; i++)
+                    {
+                        var externParamType = predefinedExternMethod.ParamsTypes[i];
+
+                        var methodParam = methodDeclaration.Params[i];
+         
+                        if (!externParamType.IsEqualsNotNone(methodParam.Type))
+                        {
+                            AddError($"Expected type {externParamType.Text}", methodParam.Position);
+                        }
+                    }
+                }
+            }
+
+        }
+
         public virtual void VisitMethodDeclaration(BoundMethodDeclaration methodDeclaration, TypeScope newScope)
         {
             //the method scope is created in the visit class declaration to make it scopeless
 
             _currentMethod = methodDeclaration;
 
-            foreach (var item in methodDeclaration.Body.Members)
+            var isExtern = methodDeclaration.Modifiers.Any(x => x.Kind == SyntaxKind.ExternKeyword);
+
+            if (isExtern)
             {
-                VisitDefaultBlock(item, newScope);
+                VisitExternMethodDeclaration(methodDeclaration, newScope);
+            }
+            else
+            {
+                foreach (var item in methodDeclaration.Body.Members)
+                {
+                    VisitDefaultBlock(item, newScope);
+                }
             }
 
             _currentMethod = null;
@@ -342,17 +392,25 @@ namespace JiteLang.Main.Visitor.Type
         {
             var method = scope.GetMethod(((BoundIdentifierExpression)callExpression.Caller).Text);
 
-            for (int i = 0; i < callExpression.Args.Count; i++)
+            if (method.Params.Count != callExpression.Args.Count)
             {
-                var argItem = callExpression.Args[i];
-
-                var argType = VisitExpression(argItem, scope);
-
-                var paramItem = method.Params.ElementAtOrDefault(i);
-
-                if (!argType.IsEqualsNotNone(paramItem.Value?.Type))
+                AddError($"Expected {method.Params.Count} parameters, but got {callExpression.Args.Count}", callExpression.Position);
+            }
+            else
+            {
+                for (int i = 0; i < callExpression.Args.Count; i++)
                 {
-                    AddError($"Expected type {argType.Text}", argItem.Position);
+                    var argItem = callExpression.Args[i];
+
+                    var argType = VisitExpression(argItem, scope);
+
+                    var paramItem = method.Params.ElementAt(i);
+                    var paramItemType = paramItem.Value.Type;
+
+                    if (!argType.IsEqualsNotNone(paramItemType))
+                    {
+                        AddError($"Expected type {paramItemType.Text}", argItem.Position);
+                    }
                 }
             }
 

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using JiteLang.Main.AsmBuilder.Visitor;
-using JiteLang.Main.Builder.AsmBuilder;
-using JiteLang.Main.Builder.Instructions;
 using JiteLang.Main.Emit;
 using JiteLang.Main.LangLexer;
 using JiteLang.Main.LangParser;
@@ -11,6 +9,8 @@ using JiteLang.Main.Visitor.Type.Scope;
 using JiteLang.Main.AsmBuilder.Scope;
 using JiteLang.Main.Bound;
 using System.IO;
+using JiteLang.Main.AsmBuilder.Builder;
+using JiteLang.Main.AsmBuilder.Instructions;
 
 namespace JiteLang
 {
@@ -23,11 +23,13 @@ namespace Teste
 {
     class AlgumaCoisa
     {
-        public int Main()
+        public void Main()
         {
-            int a = 1 * 2 + 10 / 2;
-            return a;
+            string value = "i cant believe this string works";
+            Print(value);
         }
+
+        public extern void Print(string value);
     }
 }
 """;
@@ -60,9 +62,9 @@ namespace Teste
                 return;
             }
 
-            var asmBuilder = new AssemblyBuilder();
-            var asmBuilderAbstractions = new AssemblyBuilderAbstractions(asmBuilder);
-            var asmBuilderVisitor = new AsmBuilderVisitor(asmBuilder, asmBuilderAbstractions);
+            AssemblyBuilder asmBuilder = new();
+            AssemblyBuilderAbstractions asmBuilderAbstractions = new(asmBuilder);
+            AsmBuilderVisitor asmBuilderVisitor = new(asmBuilder, asmBuilderAbstractions);
             var intructions = asmBuilderVisitor.VisitNamespaceDeclaration(builtNamespace, CodeScope.CreateGlobal());
 
             var optimized = Optimize(intructions); //make it better
