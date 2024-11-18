@@ -1,5 +1,5 @@
-﻿using JiteLang.Main.Bound;
-using JiteLang.Main.Shared;
+﻿using JiteLang.Main.Shared;
+using JiteLang.Main.Shared.Type;
 using System.Collections.Generic;
 
 namespace JiteLang.Main.Visitor.Type.Scope

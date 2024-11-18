@@ -1,13 +1,4 @@
 ﻿using JiteLang.Main.Bound.Expressions;
-using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
-using JiteLang.Main.LangParser.SyntaxNodes.Statements;
-using JiteLang.Main.LangParser.SyntaxTree;
-using JiteLang.Syntax;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JiteLang.Main.Bound.Statements
 {
@@ -15,17 +6,27 @@ namespace JiteLang.Main.Bound.Statements
     {
         public override BoundKind Kind => BoundKind.IfStatement;
 
-        public BoundIfStatement(BoundExpression condition, BoundBlockStatement<BoundNode> body, BoundStatement? @else = null)
+        public BoundIfStatement(BoundNode parent,
+            BoundExpression condition,
+            BoundBlockStatement<BoundNode> body,
+            BoundElseStatement? @else = null) : base(parent)
         {
             Condition = condition;
             Body = body;
             Else = @else;
         }
 
+        public BoundIfStatement(BoundNode parent,
+           BoundExpression condition,
+           BoundElseStatement? @else = null) : base(parent)
+        {
+            Condition = condition;
+            Body = new(this);
+            Else = @else;
+        }
+
         public BoundExpression Condition { get; set; }
-
         public BoundBlockStatement<BoundNode> Body { get; set; }
-
-        public BoundStatement? Else { get; set; }
+        public BoundElseStatement? Else { get; set; }
     }
 }

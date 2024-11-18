@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using JiteLang.Main.Bound.Expressions;
-using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
+﻿using JiteLang.Main.Bound.Expressions;
 
 namespace JiteLang.Main.Bound.Statements.Declaration
 {
     internal abstract class BoundDeclaration : BoundStatement
     {
-        public BoundDeclaration(BoundIdentifierExpression identifier)
+        public BoundDeclaration(BoundNode parent, BoundIdentifierExpression identifier) : base(parent)
         {
             Identifier = identifier; 
             Position = identifier.Position;

@@ -12,7 +12,7 @@ namespace JiteLang.Main.Bound.Expressions
     internal class BoundIdentifierExpression : BoundExpression
     {
         public override BoundKind Kind => BoundKind.IdentifierExpression;
-        public BoundIdentifierExpression(string text, SyntaxPosition position)
+        public BoundIdentifierExpression(BoundNode parent, string text, SyntaxPosition position) : base(parent)
         {
             Text = text;
             Position = position;

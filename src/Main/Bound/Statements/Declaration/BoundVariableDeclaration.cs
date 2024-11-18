@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using JiteLang.Main.LangParser.SyntaxNodes;
 using JiteLang.Main.Bound.Expressions;
+using JiteLang.Main.Shared.Type;
 
 namespace JiteLang.Main.Bound.Statements.Declaration
 {
@@ -8,7 +9,7 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.VariableDeclaration;
 
-        public BoundVariableDeclaration(BoundIdentifierExpression identifier, TypeSymbol type, BoundExpression? initialValue = null) : base(identifier) 
+        public BoundVariableDeclaration(BoundNode parent, BoundIdentifierExpression identifier, TypeSymbol type, BoundExpression? initialValue = null) : base(parent, identifier) 
         {
             InitialValue = initialValue;
             Type = type;

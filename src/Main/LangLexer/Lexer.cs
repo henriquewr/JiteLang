@@ -43,8 +43,10 @@ namespace JiteLang.Main.LangLexer
 
         private TokenInfo ScanToken()
         {
-            var token = new TokenInfo();
-            token.Kind = SyntaxKind.None;
+            var token = new TokenInfo
+            {
+                Kind = SyntaxKind.None
+            };
 
             var lastPosition = _sourceCode.Position;
 

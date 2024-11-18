@@ -53,6 +53,10 @@ namespace JiteLang.Main.Emit
 
                         case AsmInstructionType.Or:
                             Or(left.Value, right.Value);
+                            break; 
+                        
+                        case AsmInstructionType.Xor:
+                            Xor(left.Value, right.Value);
                             break;
 
                         case AsmInstructionType.And:
@@ -87,6 +91,9 @@ namespace JiteLang.Main.Emit
                             break;
                         case AsmInstructionType.Section:
                             Section(operand.Value);
+                            break;
+                        case AsmInstructionType.Extern:
+                            Extern(operand.Value);
                             break;
                         case AsmInstructionType.Global:
                             Global(operand.Value);
@@ -191,6 +198,10 @@ namespace JiteLang.Main.Emit
         {
             _outputWriter.WriteLine($"    or {left}, {right}");
         }
+        public void Xor(string left, string right)
+        {
+            _outputWriter.WriteLine($"    xor {left}, {right}");
+        }
         public void Mov(string left, string right)
         {
             _outputWriter.WriteLine($"    mov {left}, {right}");
@@ -257,6 +268,10 @@ namespace JiteLang.Main.Emit
         public void Section(string section)
         {
             _outputWriter.WriteLine($"section {section}");
+        }
+        public void Extern(string name)
+        {
+            _outputWriter.WriteLine($"extern {name}");
         }
         public void Global(string name)
         {

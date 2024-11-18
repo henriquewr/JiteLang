@@ -6,7 +6,7 @@ namespace JiteLang.Main.Bound.Expressions
     {
         public override BoundKind Kind => BoundKind.BinaryExpression;
 
-        public BoundBinaryExpression(BoundExpression left, BinaryOperatorKind operation, BoundExpression right)
+        public BoundBinaryExpression(BoundNode parent, BoundExpression left, BinaryOperatorKind operation, BoundExpression right) : base(parent)
         {
             Left = left;
             Operation = operation;

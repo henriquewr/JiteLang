@@ -5,8 +5,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyVersion>2024.10.7.55</AssemblyVersion>
-    <FileVersion>2024.10.7.55</FileVersion>
+    <AssemblyVersion>2024.11.18.4</AssemblyVersion>
+    <FileVersion>2024.11.18.4</FileVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 

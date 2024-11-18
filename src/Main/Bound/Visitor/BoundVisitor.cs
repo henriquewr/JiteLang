@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using JiteLang.Main.Bound.Expressions;
 using JiteLang.Main.Bound.Statements;
 using JiteLang.Main.Bound.Statements.Declaration;
-using JiteLang.Main.LangParser;
-using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
-using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
-using JiteLang.Syntax;
 
 namespace JiteLang.Main.Bound.Visitor
 {
@@ -64,7 +59,7 @@ namespace JiteLang.Main.Bound.Visitor
             throw new NotImplementedException();
         }
 
-        public virtual BoundStatement VisitElseStatement(BoundStatement elseStatement, object scope)
+        public virtual BoundStatement VisitElseStatement(BoundElseStatement elseStatement, object scope)
         {
             throw new NotImplementedException();
         }

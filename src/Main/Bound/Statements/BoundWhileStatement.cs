@@ -2,18 +2,26 @@
 
 namespace JiteLang.Main.Bound.Statements
 {
-    internal class BoundWhileStatement : BoundStatement
+    internal class BoundWhileStatement : BoundLoopStatement
     {
         public override BoundKind Kind => BoundKind.WhileStatement;
 
-        public BoundWhileStatement(BoundExpression condition, BoundBlockStatement<BoundNode> body)
+        public BoundWhileStatement(BoundNode parent,
+            BoundExpression condition,
+            BoundBlockStatement<BoundNode> body) : base(parent)
         {
             Condition = condition;
             Body = body;
         }
 
-        public BoundExpression Condition { get; set; }
+        public BoundWhileStatement(BoundNode parent,
+            BoundExpression condition) : base(parent)
+        {
+            Condition = condition;
+            Body = new(this);
+        }
 
+        public BoundExpression Condition { get; set; }
         public BoundBlockStatement<BoundNode> Body { get; set; }
     }
 }

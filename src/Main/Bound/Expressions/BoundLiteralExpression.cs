@@ -7,7 +7,7 @@ namespace JiteLang.Main.Bound.Expressions
     internal class BoundLiteralExpression : BoundExpression
     {
         public override BoundKind Kind => BoundKind.LiteralExpression;
-        public BoundLiteralExpression(ConstantValue value)
+        public BoundLiteralExpression(BoundNode parent, ConstantValue value) : base(parent)
         {
             Value = value;
             Position = value.Position;

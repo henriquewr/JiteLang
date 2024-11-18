@@ -1,5 +1,6 @@
 ﻿using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.Types;
+using JiteLang.Main.Shared.Type;
 using JiteLang.Syntax;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ namespace JiteLang.Main.Bound.Expressions
     internal class BoundCastExpression : BoundExpression
     {
         public override BoundKind Kind => BoundKind.CastExpression;
-        public BoundCastExpression(BoundExpression value, TypeSymbol toType)
+        public BoundCastExpression(BoundNode parent, BoundExpression value, TypeSymbol toType) : base(parent)
         {
             Value = value;
             ToType = toType;

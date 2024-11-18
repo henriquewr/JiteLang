@@ -1,4 +1,5 @@
 ﻿using JiteLang.Main.Bound.Expressions;
+using JiteLang.Main.Shared.Type;
 
 namespace JiteLang.Main.Bound.Statements.Declaration
 {
@@ -6,7 +7,7 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.ParameterDeclaration;
 
-        public BoundParameterDeclaration(BoundIdentifierExpression identifierExpression, TypeSymbol type) : base(identifierExpression)
+        public BoundParameterDeclaration(BoundNode parent, BoundIdentifierExpression identifierExpression, TypeSymbol type) : base(parent, identifierExpression)
         {
             Type = type;
         }

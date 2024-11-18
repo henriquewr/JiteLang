@@ -6,7 +6,7 @@ namespace JiteLang.Main.Bound.Statements
     {
         public override BoundKind Kind => BoundKind.ReturnStatement;
 
-        public BoundReturnStatement(BoundExpression? returnValue = null)
+        public BoundReturnStatement(BoundNode parent, BoundExpression? returnValue = null) : base(parent)
         {
             ReturnValue = returnValue;
         }

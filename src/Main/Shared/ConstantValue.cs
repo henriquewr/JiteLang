@@ -1,7 +1,6 @@
-﻿using JiteLang.Main.Bound;
+﻿using JiteLang.Main.Shared.Type;
 using JiteLang.Syntax;
 using System.Diagnostics;
-using System.Security.AccessControl;
 
 namespace JiteLang.Main.Shared
 {
@@ -12,6 +11,7 @@ namespace JiteLang.Main.Shared
         Int,
         Bool,
         Long,
+        Null,
     }
 
 
@@ -50,6 +50,10 @@ namespace JiteLang.Main.Shared
             CharValue = value;
         }
 
+        public ConstantValue(SyntaxPosition position) : this(ConstantValueKind.Null, position, SyntaxFacts.Null, false)
+        {
+        }
+
         public ConstantValueKind Kind { get; set; }
 
         public string Text { get; set; }
@@ -67,22 +71,22 @@ namespace JiteLang.Main.Shared
 
         public SyntaxPosition Position { get; set; }
 
-        public PredefinedTypeSymbol Type
-        {
-            get
-            {
-                var type = Kind switch
-                {
-                    ConstantValueKind.String => PredefinedTypeSymbol.String,
-                    ConstantValueKind.Char => PredefinedTypeSymbol.Char,
-                    ConstantValueKind.Int => PredefinedTypeSymbol.Int,
-                    ConstantValueKind.Bool => PredefinedTypeSymbol.Bool,
-                    ConstantValueKind.Long => PredefinedTypeSymbol.Long,
-                    _ => throw new UnreachableException(),
-                };
+        public PredefinedTypeSymbol Type => GetTypeFromConstantValue(Kind);
 
-                return type;
-            }
+        public static PredefinedTypeSymbol GetTypeFromConstantValue(ConstantValueKind constantValueKind)
+        {
+            var type = constantValueKind switch
+            {
+                ConstantValueKind.String => PredefinedTypeSymbol.String,
+                ConstantValueKind.Char => PredefinedTypeSymbol.Char,
+                ConstantValueKind.Int => PredefinedTypeSymbol.Int,
+                ConstantValueKind.Bool => PredefinedTypeSymbol.Bool,
+                ConstantValueKind.Long => PredefinedTypeSymbol.Long,
+                ConstantValueKind.Null => PredefinedTypeSymbol.Object,
+                _ => throw new UnreachableException(),
+            };
+
+            return type;
         }
     }
 }

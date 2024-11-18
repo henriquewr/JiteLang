@@ -6,9 +6,14 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.NamespaceDeclaration;
 
-        public BoundNamespaceDeclaration(BoundIdentifierExpression identifier, BoundBlockStatement<BoundClassDeclaration> body) : base(identifier)
+        public BoundNamespaceDeclaration(BoundNode parent, BoundIdentifierExpression identifier, BoundBlockStatement<BoundClassDeclaration> body) : base(parent, identifier)
         {
             Body = body;
+        }
+
+        public BoundNamespaceDeclaration(BoundNode parent, BoundIdentifierExpression identifier) : base(parent, identifier)
+        {
+            Body = new(this);
         }
 
         public BoundBlockStatement<BoundClassDeclaration> Body { get; set; }

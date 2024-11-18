@@ -9,7 +9,7 @@ namespace JiteLang.Main.Bound.Expressions
     internal class BoundMemberExpression : BoundExpression
     {
         public override BoundKind Kind => BoundKind.MemberExpression;
-        public BoundMemberExpression()
+        public BoundMemberExpression(BoundNode parent) : base(parent)
         {
         }
     }

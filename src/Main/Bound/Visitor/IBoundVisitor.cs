@@ -17,7 +17,7 @@ namespace JiteLang.Main.Bound.Visitor
         #region Statements
         TStatement VisitReturnStatement(BoundReturnStatement returnStatement, TScope scope);
         TStatement VisitIfStatement(BoundIfStatement ifStatement, TScope scope);
-        TStatement VisitElseStatement(BoundStatement elseStatement, TScope scope);
+        TStatement VisitElseStatement(BoundElseStatement elseStatement, TScope scope);
         TStatement VisitWhileStatement(BoundWhileStatement whileStatement, TScope scope);
         #endregion Statements
 

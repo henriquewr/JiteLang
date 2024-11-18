@@ -1,19 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using JiteLang.Main.LangParser.SyntaxNodes;
 
 namespace JiteLang.Main.LangParser.Types
 {
-    internal abstract class TypeSyntax
+    internal class TypeSyntax
     {
-        public TypeSyntax(string text)
+        public TypeSyntax(SyntaxToken token)
         {
-            Text = text;
+            Token = token;
         }
 
-        public abstract bool IsPreDefined { get; }
-        public string Text { get; set; }
+        public virtual bool IsPreDefined => false;
+        public string Text => Token.Text;
+        public SyntaxToken Token { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using JiteLang.Main.Bound;
+﻿using JiteLang.Main.Shared.Type;
 
 namespace JiteLang.Main.Visitor.Type.Scope
 {

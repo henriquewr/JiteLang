@@ -7,7 +7,7 @@ namespace JiteLang.Main.Bound.Expressions
     {
         public override BoundKind Kind => BoundKind.AssignmentExpression;
 
-        public BoundAssignmentExpression(BoundExpression left, BoundKind @operator, BoundExpression right)
+        public BoundAssignmentExpression(BoundNode parent, BoundExpression left, BoundKind @operator, BoundExpression right) : base(parent)
         {
             Right = right;
             Operator = @operator;

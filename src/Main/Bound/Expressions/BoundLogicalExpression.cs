@@ -9,7 +9,7 @@ namespace JiteLang.Main.Bound.Expressions
     {
         public override BoundKind Kind => BoundKind.LogicalExpression;
 
-        public BoundLogicalExpression(BoundExpression left, LogicalOperatorKind operation, BoundExpression right)
+        public BoundLogicalExpression(BoundNode parent, BoundExpression left, LogicalOperatorKind operation, BoundExpression right) : base(parent)
         {
             Left = left;
             Operation = operation;

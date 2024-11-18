@@ -12,6 +12,7 @@ namespace JiteLang.Syntax
         public const string Bool = "bool";
         public const string Long = "long";
         public const string Char = "char";
+        public const string Object = "object";
 
         public const string False = "false";
         public const string True = "true";
@@ -26,6 +27,7 @@ namespace JiteLang.Syntax
         public const string If = "if";
         public const string Else = "else";
         public const string While = "while";
+        public const string New = "new";
 
 
         public const int LiteralsMinValue = 2000;
@@ -118,7 +120,9 @@ namespace JiteLang.Syntax
                 case String:
                     return SyntaxKind.StringKeyword;
                 case Void:
-                    return SyntaxKind.VoidKeyword;
+                    return SyntaxKind.VoidKeyword;               
+                case Object:
+                    return SyntaxKind.ObjectKeyword;
 
                 case Namespace:
                     return SyntaxKind.NamespaceKeyword;
@@ -129,7 +133,9 @@ namespace JiteLang.Syntax
                 case Else:
                     return SyntaxKind.ElseKeyword;
                 case While:
-                    return SyntaxKind.WhileKeyword;
+                    return SyntaxKind.WhileKeyword;        
+                case New:
+                    return SyntaxKind.NewKeyword;
 
                 case Public:
                     return SyntaxKind.PublicKeyword;
@@ -195,21 +201,29 @@ namespace JiteLang.Syntax
                     return String;
                 case SyntaxKind.VoidKeyword:
                     return Void;
-
-                case SyntaxKind.PublicKeyword:
-                    return Public;
-                case SyntaxKind.PrivateKeyword:
-                    return Private;        
-                
-                case SyntaxKind.ExternKeyword:
-                    return Extern;
+                case SyntaxKind.ObjectKeyword:
+                    return Object;
 
                 case SyntaxKind.NamespaceKeyword:
                     return Namespace;
                 case SyntaxKind.ClassKeyword:
-                    return Class;    
+                    return Class;
                 case SyntaxKind.IfKeyword:
                     return If;
+                case SyntaxKind.ElseKeyword:
+                    return Else;
+                case SyntaxKind.WhileKeyword:
+                    return While;
+                case SyntaxKind.NewKeyword:
+                    return New;
+
+                case SyntaxKind.PublicKeyword:
+                    return Public;
+                case SyntaxKind.PrivateKeyword:
+                    return Private;
+
+                case SyntaxKind.ExternKeyword:
+                    return Extern;
 
                 case SyntaxKind.ReturnKeyword:
                     return Return;

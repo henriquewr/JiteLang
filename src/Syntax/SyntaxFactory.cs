@@ -4,6 +4,7 @@ using JiteLang.Main.LangLexer.Token;
 using JiteLang.Main.LangParser.SyntaxNodes;
 using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
+using JiteLang.Main.LangParser.Types;
 using JiteLang.Main.LangParser.Types.Predefined;
 
 namespace JiteLang.Syntax
@@ -29,6 +30,19 @@ namespace JiteLang.Syntax
             return PredefinedType(token.Kind, token.Position);
         }
 
+        public static TypeSyntax Type(in TokenInfo token)
+        {
+            var isPredefined = SyntaxFacts.IsPredefinedType(token.Kind);
+            if (isPredefined)
+            {
+                return PredefinedType(token);
+            }
+            var sytaxToken = Token(token);
+
+            var typeSyntax = new TypeSyntax(sytaxToken);
+            return typeSyntax;
+        }
+
         public static PredefinedTypeSyntax PredefinedType(SyntaxKind keyword, SyntaxPosition position)
         {
             var text = SyntaxFacts.GetText(keyword);
@@ -51,11 +65,12 @@ namespace JiteLang.Syntax
 
             return varDeclaration;
         }
-        public static VariableDeclarationSyntax DeclareFromPredefined(in TokenInfo token, IdentifierExpressionSyntax identifier)
-        {
-            var predefined = PredefinedType(token);
 
-            var varDeclaration = new VariableDeclarationSyntax(identifier, predefined);
+        public static VariableDeclarationSyntax DeclareVariable(in TokenInfo token, IdentifierExpressionSyntax identifier)
+        {
+            var type = Type(token);
+
+            var varDeclaration = new VariableDeclarationSyntax(identifier, type);
 
             return varDeclaration;
         }
@@ -90,6 +105,10 @@ namespace JiteLang.Syntax
                 case SyntaxKind.TrueLiteralToken:
                 case SyntaxKind.TrueKeyword:
                     return new SyntaxTokenWithValue<bool>(tokenInfo.Kind, tokenInfo.Text!, true, tokenInfo.Position);
+
+                case SyntaxKind.NullLiteralToken:
+                case SyntaxKind.NullKeyword:
+                    return new SyntaxTokenWithValue<object?>(tokenInfo.Kind, tokenInfo.Text!, null, tokenInfo.Position);
                 default:
                     throw new UnreachableException();
             }
@@ -103,7 +122,6 @@ namespace JiteLang.Syntax
 
         public static LiteralExpressionSyntax LiteralExpression(SyntaxToken tokenWithValue)
         {
-            //Verify if is possible to create a literal expression from type
             var literalExpression = new LiteralExpressionSyntax(tokenWithValue);
             return literalExpression;
         }

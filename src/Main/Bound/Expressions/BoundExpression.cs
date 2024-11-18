@@ -8,5 +8,8 @@ namespace JiteLang.Main.Bound.Expressions
 {
     internal abstract class BoundExpression : BoundNode
     {
+        public BoundExpression(BoundNode parent) : base(parent)
+        {
+        }
     }
 }

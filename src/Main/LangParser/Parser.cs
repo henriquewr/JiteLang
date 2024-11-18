@@ -111,9 +111,7 @@ namespace JiteLang.Main.LangParser
             switch (token.Kind)
             {
                 case SyntaxKind.IdentifierToken:
-                    var expr = ParseAssignmentExprOrCallExpr();
-                    Expect(SyntaxKind.SemiColon, "Expected semicolon");
-                    return expr;
+                    return ParseAssignmentExprOrCallExprOrVarDeclaration();
 
                 case SyntaxKind.ReturnKeyword:
                     return ParseReturn();
@@ -126,7 +124,7 @@ namespace JiteLang.Main.LangParser
                 default:
                     if (SyntaxFacts.IsPredefinedType(token.Kind))
                     {
-                        return ParsePredefinedTypeVarDeclaration();
+                        return ParseVarDeclaration();
                     }
                     _tokens.Advance();
                     break;
@@ -200,7 +198,7 @@ namespace JiteLang.Main.LangParser
                     default:
                         if (SyntaxFacts.IsPredefinedType(token.Kind))
                         {
-                            return ParsePredefinedTypeVarDeclaration();
+                            return ParseVarDeclaration();
                         }
                         _tokens.Advance();
                         break;
@@ -238,7 +236,7 @@ namespace JiteLang.Main.LangParser
             }
             else
             {
-                var varDeclaration = ParsePredefinedTypeVarDeclaration();
+                var varDeclaration = ParseVarDeclaration();
                 varDeclaration.Modifiers.AddRange(modifiers);
                 return varDeclaration;
             }
@@ -249,7 +247,7 @@ namespace JiteLang.Main.LangParser
             _tokens.Advance(out var returnType);
             Expect(SyntaxKind.IdentifierToken, out var methodIdentifier, "Expected identifier name");
 
-            var returnTypeSyntax = SyntaxFactory.PredefinedType(returnType);
+            var returnTypeSyntax = SyntaxFactory.Type(returnType);
             var identifier = SyntaxFactory.Identifier(methodIdentifier);
             MethodDeclarationSyntax methodDeclaration = new(identifier, returnTypeSyntax, modifiers);
 
@@ -292,9 +290,9 @@ namespace JiteLang.Main.LangParser
                 Expect(SyntaxKind.IdentifierToken, out var identifier, "Expected identifier name");
 
                 var ideToken = SyntaxFactory.Identifier(identifier);
-                var predefinedType = SyntaxFactory.PredefinedType(token);
+                var type = SyntaxFactory.Type(token);
 
-                var paramDeclaration = new ParameterDeclarationSyntax(ideToken, predefinedType);
+                var paramDeclaration = new ParameterDeclarationSyntax(ideToken, type);
 
                 if (_tokens.Current.Kind == SyntaxKind.CommaToken)
                 {
@@ -379,14 +377,14 @@ namespace JiteLang.Main.LangParser
             return returnStmp;
         }
 
-        private VariableDeclarationSyntax ParsePredefinedTypeVarDeclaration()
+        private VariableDeclarationSyntax ParseVarDeclaration()
         {
             _tokens.Advance(out var token);
 
             Expect(SyntaxKind.IdentifierToken, out var identifier, "Expected identifier name");
 
             var ideToken = SyntaxFactory.Identifier(identifier);
-            var varDeclaration = SyntaxFactory.DeclareFromPredefined(token, ideToken);
+            var varDeclaration = SyntaxFactory.DeclareVariable(token, ideToken);
 
             if (_tokens.Current.Kind == SyntaxKind.SemiColon) 
             {
@@ -404,17 +402,37 @@ namespace JiteLang.Main.LangParser
             return varDeclaration;
         }
 
-        private ExpressionSyntax ParseAssignmentExprOrCallExpr()
+        private SyntaxNode ParseAssignmentExprOrCallExprOrVarDeclaration()
         {
             _tokens.PeekNext(out var nextToken);
 
             switch (nextToken.Kind)
             {
                 case SyntaxKind.OpenParenToken:
-                    return ParseCallExpression();
+                    /*
+                        Identifier => OpenParen
+                        Method()
+                       */
+                    var callExpr = ParseCallExpression();
+                    Expect(SyntaxKind.SemiColon, "Expected semicolon");
+                    return callExpr;
+
+                case SyntaxKind.IdentifierToken:
+                    /*
+                        Identifier => Identifier
+                        UserType variable ...
+                       */
+                    return ParseVarDeclaration();
 
                 default:
-                    return ParseAssignmentExpr();
+                    /*
+                        Identifier => Equals
+                        variable = ...
+                      */
+
+                    var assignmentExpr = ParseAssignmentExpr();
+                    Expect(SyntaxKind.SemiColon, "Expected semicolon");
+                    return assignmentExpr;
             }
         }
 
@@ -448,6 +466,8 @@ namespace JiteLang.Main.LangParser
 
             return assignment;
         }
+
+#region Expressions
 
         private ExpressionSyntax ParseExpr() 
         {
@@ -534,13 +554,13 @@ namespace JiteLang.Main.LangParser
                 if (SyntaxFacts.IsPredefinedType(token.Kind))
                 {
                     _tokens.Advance();
-                    var predefinedType = SyntaxFactory.PredefinedType(token);
+                    var type = SyntaxFactory.Type(token);
                     _tokens.Advance();
                     Expect(SyntaxKind.CloseParenToken, "Expected ')'");
 
                     var valueExpr = ParseUnaryOrCastExpr();
                     
-                    var castExpr = new CastExpressionSyntax(valueExpr, predefinedType);
+                    var castExpr = new CastExpressionSyntax(valueExpr, type);
                     return castExpr;
                 }
             }
@@ -672,5 +692,7 @@ namespace JiteLang.Main.LangParser
                     return literalExpr;
             }
         }
+
+#endregion Expressions
     }
 }

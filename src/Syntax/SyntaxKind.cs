@@ -108,6 +108,8 @@ namespace JiteLang.Syntax
         FalseLiteralToken = 2005,
         /// <summary><c> </c></summary>
         TrueLiteralToken = 2006,
+        /// <summary><c> </c></summary>
+        NullLiteralToken = 2007,
 
 
 
@@ -149,6 +151,10 @@ namespace JiteLang.Syntax
         WhileKeyword = 3017,
         /// <summary><c> extern </c></summary>
         ExternKeyword = 3018,
+        /// <summary><c> new </c></summary>
+        NewKeyword = 3019,        
+        /// <summary><c> object </c></summary>
+        ObjectKeyword = 3020,
 
 
         //Declarations: 4000 -> 5000
