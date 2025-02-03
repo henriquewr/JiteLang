@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace JiteLang.Main.PredefinedExternMethods
 {
-    internal interface IPredefinedExternMethod
+    internal interface IPredefinedMethod
     {
         string Name { get; }
         TypeSymbol ReturnType { get; }

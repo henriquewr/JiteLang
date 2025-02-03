@@ -6,7 +6,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.AssignmentExpression;
 
-        public AssignmentExpressionSyntax(ExpressionSyntax left, SyntaxKind @operator, ExpressionSyntax right)
+        public AssignmentExpressionSyntax(SyntaxNode parent, ExpressionSyntax left, SyntaxKind @operator, ExpressionSyntax right) : base(parent)
         {
             Left = left;
             Operator = @operator;
@@ -16,6 +16,5 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
         public ExpressionSyntax Left { get; set; }
         public SyntaxKind Operator { get; set; }
         public ExpressionSyntax Right { get; set; }
-
     }
 }

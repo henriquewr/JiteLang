@@ -4,7 +4,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
 {
     internal abstract class DeclarationSyntax : StatementSyntax
     {
-        public DeclarationSyntax(IdentifierExpressionSyntax identifier)
+        public DeclarationSyntax(SyntaxNode parent, IdentifierExpressionSyntax identifier) : base(parent)
         {
             Identifier = identifier;
             Position = identifier.Position;

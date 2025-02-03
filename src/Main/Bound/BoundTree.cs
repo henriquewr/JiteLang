@@ -1,12 +1,13 @@
 ﻿using JiteLang.Main.Bound.Context;
 using JiteLang.Main.Bound.Statements.Declaration;
+using JiteLang.Main.Shared.Type;
 using System.Collections.Generic;
 
 namespace JiteLang.Main.Bound
 {
     internal class BoundTree
     {
-        public BoundTree(BoundNamespaceDeclaration root, List<string> errors)
+        public BoundTree(BoundNamespaceDeclaration root, HashSet<string> errors)
         {
             Errors = errors;
             Root = root;
@@ -22,6 +23,6 @@ namespace JiteLang.Main.Bound
         public BoundNamespaceDeclaration Root { get; set; }
 
         public bool HasErrors => Errors.Count > 0;
-        public List<string> Errors { get; set; }
+        public HashSet<string> Errors { get; set; }
     }
 }

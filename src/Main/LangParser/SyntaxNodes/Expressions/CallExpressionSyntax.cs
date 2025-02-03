@@ -8,14 +8,14 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.CallExpression;
 
-        public CallExpressionSyntax(ExpressionSyntax caller, List<ExpressionSyntax> args)
+        public CallExpressionSyntax(SyntaxNode parent, ExpressionSyntax caller, List<ExpressionSyntax> args) : base(parent)
         {
             Caller = caller;
             Args = args;
             Position = caller.Position;
         }
 
-        public CallExpressionSyntax(ExpressionSyntax caller)
+        public CallExpressionSyntax(SyntaxNode parent, ExpressionSyntax caller) : base(parent)
         {
             Caller = caller;
             Args = new List<ExpressionSyntax>();

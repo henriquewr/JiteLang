@@ -1,9 +1,4 @@
-﻿using JiteLang.Main.AsmBuilder.Instructions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using JiteLang.Main.Shared.Type;
 
 namespace JiteLang.Main.Emit.Tree.Expressions
 {
@@ -11,7 +6,8 @@ namespace JiteLang.Main.Emit.Tree.Expressions
     {
         public EmitExpression(EmitNode parent) : base(parent)
         {
-
         }
+
+        public abstract TypeSymbol Type { get; }
     }
 }

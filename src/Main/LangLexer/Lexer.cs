@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using JiteLang.Main.LangLexer.Token;
 using JiteLang.Source;
 using JiteLang.Syntax;
@@ -186,6 +185,11 @@ namespace JiteLang.Main.LangLexer
                     token.Kind = SyntaxKind.CommaToken;
                     break;
 
+                case '.':
+                    _sourceCode.Advance();
+                    token.Kind = SyntaxKind.DotToken;
+                    break;
+
                 case '^':
                     _sourceCode.Advance();
                     token.Kind = SyntaxKind.CaretToken;
@@ -222,7 +226,7 @@ namespace JiteLang.Main.LangLexer
             for (var i = 0; i < chars.Length; i++)
             {
                 var c = chars[i];
-                if (!char.IsControl(chars[i]))
+                if (!char.IsControl(c))
                 {
                     visibleCount++;
                 }

@@ -13,7 +13,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
     {
         public override SyntaxKind Kind => SyntaxKind.ParameterDeclaration;
 
-        public ParameterDeclarationSyntax(IdentifierExpressionSyntax identifier, TypeSyntax type) : base(identifier)
+        public ParameterDeclarationSyntax(SyntaxNode parent, IdentifierExpressionSyntax identifier, TypeSyntax type) : base(parent, identifier)
         {
             Type = type;
         }

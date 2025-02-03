@@ -4,11 +4,11 @@ using System.Collections.Generic;
 
 namespace JiteLang.Main.Emit.Tree.Statements
 {
-    internal class EmitBlockStatement<TMembers> : EmitStatement,
-        IVarDeclarable<CodeVariable> where TMembers : EmitNode
+    internal class EmitBlockStatement<TMembers, TVar> : EmitStatement,
+        IVarDeclarable<TVar> where TMembers : EmitNode
     {
         public override EmitKind Kind => EmitKind.BlockStatement;
-        public EmitBlockStatement(EmitNode parent, List<TMembers> members, Dictionary<string, CodeVariable> variables) : base(parent)
+        public EmitBlockStatement(EmitNode parent, List<TMembers> members, Dictionary<string, TVar> variables) : base(parent)
         {
             Members = members;
             Variables = variables;
@@ -19,6 +19,6 @@ namespace JiteLang.Main.Emit.Tree.Statements
         }
 
         public List<TMembers> Members { get; set; }
-        public Dictionary<string, CodeVariable> Variables { get; set; }
+        public Dictionary<string, TVar> Variables { get; set; }
     }
 }

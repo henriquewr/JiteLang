@@ -16,14 +16,14 @@ namespace JiteLang.Main.Emit.Tree
         ElseStatement,
         WhileStatement,
         LabelStatement,
-        ConditionStatement,
         JumpStatement,
 
         NamespaceDeclaration,
         ClassDeclaration,
         MethodDeclaration,
         ParameterDeclaration,
-        VariableDeclaration,
+        LocalDeclaration,
+        FieldDeclaration,
 
 
         AssignmentExpression,
@@ -35,5 +35,6 @@ namespace JiteLang.Main.Emit.Tree
         UnaryExpression,
         MemberExpression,
         CastExpression,
+        NewExpression,
     }
 }

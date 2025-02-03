@@ -7,7 +7,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.BinaryExpression;
 
-        public BinaryExpressionSyntax(ExpressionSyntax left, BinaryOperatorKind operation, ExpressionSyntax right) 
+        public BinaryExpressionSyntax(SyntaxNode parent, ExpressionSyntax left, BinaryOperatorKind operation, ExpressionSyntax right) : base(parent)
         {
             Left = left;
             Right = right;

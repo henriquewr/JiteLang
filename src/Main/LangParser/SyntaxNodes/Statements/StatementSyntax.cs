@@ -2,5 +2,8 @@
 {
     internal abstract class StatementSyntax : SyntaxNode
     {
+        protected StatementSyntax(SyntaxNode parent) : base(parent)
+        {
+        }
     }
 }

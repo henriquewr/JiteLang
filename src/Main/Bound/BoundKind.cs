@@ -26,7 +26,8 @@ namespace JiteLang.Main.Bound
         ClassDeclaration,
         MethodDeclaration,
         ParameterDeclaration,
-        VariableDeclaration,
+        FieldDeclaration,
+        LocalDeclaration,
         
 
         AssignmentExpression,
@@ -38,5 +39,6 @@ namespace JiteLang.Main.Bound
         UnaryExpression,
         MemberExpression,
         CastExpression,
+        NewExpression,
     }
 }

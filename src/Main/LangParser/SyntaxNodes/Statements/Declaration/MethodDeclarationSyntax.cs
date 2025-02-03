@@ -7,15 +7,15 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
 {
     internal class MethodDeclarationSyntax : DeclarationSyntax
     {
-        public MethodDeclarationSyntax(IdentifierExpressionSyntax identifier, TypeSyntax returnType, List<SyntaxToken> modifiers) : base(identifier)
+        public MethodDeclarationSyntax(SyntaxNode parent, IdentifierExpressionSyntax identifier, TypeSyntax returnType, List<SyntaxToken> modifiers) : base(parent, identifier)
         {
             ReturnType = returnType;
             Modifiers = modifiers;
             Params = new();
-            Body = new();
+            Body = new(this);
         }
 
-        public MethodDeclarationSyntax(IdentifierExpressionSyntax identifier, TypeSyntax returnType) : this(identifier, returnType, new())
+        public MethodDeclarationSyntax(SyntaxNode parent, IdentifierExpressionSyntax identifier, TypeSyntax returnType) : this(parent, identifier, returnType, new())
         {
         } 
      

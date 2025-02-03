@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections.Immutable;
 
 namespace JiteLang.Main.Shared.Type.Members.Method
 {
-    internal class MethodSymbol : MemberSymbol
+    internal class MethodSymbol : TypedMemberSymbol
     {
-        public MethodSymbol(Lazy<TypeSymbol> returnType, IImmutableList<ParameterSymbol> parameters)
+        public MethodSymbol(string name, DelegateTypeSymbol type) : base(name, type)
         {
-            ReturnType = returnType;
-            Parameters = parameters;
         }
-
-        public Lazy<TypeSymbol> ReturnType { get; set; }
-        public IImmutableList<ParameterSymbol> Parameters { get; set; }
     }
 }

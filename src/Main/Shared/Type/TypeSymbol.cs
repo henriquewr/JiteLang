@@ -1,67 +1,34 @@
-﻿using JiteLang.Main.Shared.Type.Members.Method;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
 namespace JiteLang.Main.Shared.Type
 {
-    internal class TypeSymbol : IEquatable<TypeSymbol>
+    internal abstract class TypeSymbol : IEquatable<TypeSymbol>
     {
-        public TypeSymbol(string text, bool isReferenceType, TypeSymbol subClass, IImmutableDictionary<string, MethodSymbol> methods)
+        public TypeSymbol(string fullText, string text, bool isReferenceType)
         {
+            FullText = fullText;
             Text = text;
-            Methods = methods;
             IsReferenceType = isReferenceType;
-            SubClass = subClass;
         }
 
+        public abstract int Size { get; }
 
-        public TypeSymbol(string text, bool isReferenceType, IImmutableDictionary<string, MethodSymbol> methods)
-        {
-            Text = text;
-            Methods = methods;
-            IsReferenceType = isReferenceType;
-
-            if (IsReferenceType)
-            {
-                SubClass = PredefinedTypeSymbol.Object;
-            }
-        }
-
-        public TypeSymbol? SubClass { get; init; }
-
-        public bool IsSubClassOf(TypeSymbol typeSymbol)
-        {
-            var currentSubClass = SubClass;
-
-            while (currentSubClass != null)
-            {
-                if (currentSubClass.Equals(typeSymbol))
-                {
-                    return true;
-                }
-
-                currentSubClass = currentSubClass?.SubClass;
-            }
-
-            return false;
-        }
-
+        public string FullText { get; set; }
         public string Text { get; set; }
-        public bool IsReferenceType { get; set; }
 
-        public static TypeSymbol None => new("?", false, ImmutableDictionary<string, MethodSymbol>.Empty);
+        public bool IsReferenceType { get; }
 
-        public bool IsEqualsNotNone(TypeSymbol? type)
+        public bool IsEqualsNotError(TypeSymbol? type)
         {
-            return IsEqualsNotNone(this, type);
+            return IsEqualsNotError(this, type);
         }
 
-        public static bool IsEqualsNotNone(TypeSymbol? x, TypeSymbol? y)
+        public static bool IsEqualsNotError(TypeSymbol? x, TypeSymbol? y)
         {
             var isSame = x?.Text == y?.Text;
-            var isSameNotNone = isSame && x?.Text != TypeSymbol.None.Text;
+            var isSameNotNone = isSame && x?.Text != ErrorTypeSymbol.Instance.Text;
 
             return isSameNotNone;
         }
@@ -71,14 +38,17 @@ namespace JiteLang.Main.Shared.Type
             return Text == other?.Text;
         }
 
-        public IImmutableDictionary<string, MethodSymbol> Methods { get; set; }
+        public bool IsError()
+        {
+            return this.Equals(ErrorTypeSymbol.Instance);
+        }
     }
 
     internal class TypeSymbolEqualityComparer : IEqualityComparer<TypeSymbol>
     {
         public bool Equals(TypeSymbol? x, TypeSymbol? y)
         {
-            return TypeSymbol.IsEqualsNotNone(x, y);
+            return TypeSymbol.IsEqualsNotError(x, y);
         }
 
         public int GetHashCode(TypeSymbol obj)
@@ -91,8 +61,8 @@ namespace JiteLang.Main.Shared.Type
     {
         public bool Equals((TypeSymbol from, TypeSymbol to) x, (TypeSymbol from, TypeSymbol to) y)
         {
-            var xIsEquals = TypeSymbol.IsEqualsNotNone(x.from, x.to);
-            var yIsEquals = TypeSymbol.IsEqualsNotNone(y.from, y.to);
+            var xIsEquals = TypeSymbol.IsEqualsNotError(x.from, x.to);
+            var yIsEquals = TypeSymbol.IsEqualsNotError(y.from, y.to);
 
             return xIsEquals == yIsEquals;
         }

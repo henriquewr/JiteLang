@@ -1,22 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 
 namespace JiteLang.Main.LangParser.SyntaxTree
 {
     internal class ParsedSyntaxTree
     {
-        public ParsedSyntaxTree() 
+        public ParsedSyntaxTree(HashSet<string> errors, NamespaceDeclarationSyntax root) 
         {
-            Errors = new List<string>();
+            Errors = errors;
+            Root = root;
         }
 
         public NamespaceDeclarationSyntax Root { get; set; }
 
         public bool HasErrors => Errors.Count > 0;
-        public List<string> Errors { get; set; }
+        public HashSet<string> Errors { get; set; }
     }
 }

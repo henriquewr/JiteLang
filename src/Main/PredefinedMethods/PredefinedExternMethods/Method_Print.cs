@@ -4,7 +4,7 @@ using JiteLang.Main.Emit.AsmBuilder.Operands;
 using JiteLang.Main.Shared.Type;
 using System.Collections.Generic;
 
-namespace JiteLang.Main.PredefinedExternMethods
+namespace JiteLang.Main.PredefinedExternMethods.PredefinedExternMethods
 {
     internal class Method_Print : IPredefinedExternMethod
     {
@@ -77,7 +77,7 @@ namespace JiteLang.Main.PredefinedExternMethods
                     asmBuilder.Ret(new Operand("8")),
                 };
             }
-           
+
 
             return instructions;
         }

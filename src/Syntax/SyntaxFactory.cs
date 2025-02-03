@@ -57,32 +57,23 @@ namespace JiteLang.Syntax
             return predefined;
         }
 
-        public static VariableDeclarationSyntax DeclareFromPredefined(SyntaxKind keyword, in SyntaxPosition position, IdentifierExpressionSyntax identifier)
-        {
-            var predefined = PredefinedType(keyword, position);
-
-            var varDeclaration = new VariableDeclarationSyntax(identifier, predefined);
-
-            return varDeclaration;
-        }
-
-        public static VariableDeclarationSyntax DeclareVariable(in TokenInfo token, IdentifierExpressionSyntax identifier)
+        public static VariableDeclarationSyntax DeclareVariable(in TokenInfo token, SyntaxNode parent, IdentifierExpressionSyntax identifier)
         {
             var type = Type(token);
 
-            var varDeclaration = new VariableDeclarationSyntax(identifier, type);
+            var varDeclaration = new VariableDeclarationSyntax(parent, identifier, type);
 
             return varDeclaration;
         }
 
-        public static IdentifierExpressionSyntax Identifier(in TokenInfo token)
+        public static IdentifierExpressionSyntax Identifier(SyntaxNode parent, in TokenInfo token)
         {
-            return Identifier(token.Text, token.Position);
+            return Identifier(token.Text, parent, token.Position);
         }
 
-        public static IdentifierExpressionSyntax Identifier(string text, in SyntaxPosition position)
+        public static IdentifierExpressionSyntax Identifier(string text, SyntaxNode parent, in SyntaxPosition position)
         {
-            var identifier = new IdentifierExpressionSyntax(text, position);
+            var identifier = new IdentifierExpressionSyntax(parent, text, position);
             return identifier;
         }
 
@@ -120,9 +111,9 @@ namespace JiteLang.Syntax
             return token;
         }
 
-        public static LiteralExpressionSyntax LiteralExpression(SyntaxToken tokenWithValue)
+        public static LiteralExpressionSyntax LiteralExpression(SyntaxNode parent, SyntaxToken tokenWithValue)
         {
-            var literalExpression = new LiteralExpressionSyntax(tokenWithValue);
+            var literalExpression = new LiteralExpressionSyntax(parent, tokenWithValue);
             return literalExpression;
         }
     }

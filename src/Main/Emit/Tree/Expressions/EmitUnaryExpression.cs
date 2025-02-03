@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using JiteLang.Main.Shared.Type;
 
 namespace JiteLang.Main.Emit.Tree.Expressions
 {
     internal class EmitUnaryExpression : EmitExpression
     {
         public override EmitKind Kind => EmitKind.UnaryExpression;
-        public EmitUnaryExpression(EmitNode parent) : base(parent)
+
+        public override TypeSymbol Type { get; }
+
+        public EmitUnaryExpression(EmitNode parent, TypeSymbol type) : base(parent)
         {
-            
+            Type = type;
         }
     }
 }

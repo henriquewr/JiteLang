@@ -7,7 +7,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.CastExpression;
 
-        public CastExpressionSyntax(ExpressionSyntax value, TypeSyntax toType)
+        public CastExpressionSyntax(SyntaxNode parent, ExpressionSyntax value, TypeSyntax toType) : base(parent)
         {
             Value = value;
             ToType = toType;

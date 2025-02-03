@@ -60,7 +60,7 @@ namespace JiteLang.Syntax
                 default:
                     return false;
             }
-        }
+        } 
 
         public static bool IsModifier(SyntaxKind kind) //the name IsModifier is very generic...
         {
@@ -96,6 +96,23 @@ namespace JiteLang.Syntax
                 case SyntaxKind.StringKeyword:
                 case SyntaxKind.VoidKeyword:
                     return true;
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsAssignmentOperator(SyntaxKind kind)
+        {
+            switch (kind)
+            {
+                case SyntaxKind.EqualsToken:
+                case SyntaxKind.PlusEqualsToken:
+                case SyntaxKind.MinusEqualsToken:
+                case SyntaxKind.AsteriskEqualsToken:
+                case SyntaxKind.SlashEqualsToken:
+                case SyntaxKind.PercentEqualsToken:
+                    return true;
+
                 default:
                     return false;
             }

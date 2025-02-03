@@ -11,7 +11,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.IdentifierExpression;
 
-        public IdentifierExpressionSyntax(string text, SyntaxPosition position)
+        public IdentifierExpressionSyntax(SyntaxNode parent, string text, SyntaxPosition position) : base(parent)
         {
             Text = text;
             Position = position;

@@ -1,5 +1,4 @@
 ﻿using JiteLang.Main.Bound.Context;
-using JiteLang.Main.Bound.Context.Conversions;
 using JiteLang.Main.Bound.Expressions;
 using JiteLang.Main.Bound.Statements;
 using JiteLang.Main.Bound.Statements.Declaration;
@@ -9,9 +8,10 @@ using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 using JiteLang.Main.LangParser.SyntaxTree;
 using JiteLang.Main.LangParser.Types;
-using JiteLang.Main.PredefinedExternMethods;
+using JiteLang.Main.PredefinedExternMethods.PredefinedExternMethods;
 using JiteLang.Main.Shared;
 using JiteLang.Main.Shared.Type;
+using JiteLang.Main.Shared.Type.Members;
 using JiteLang.Main.Shared.Type.Members.Method;
 using JiteLang.Main.Visitor.Type.Scope;
 using JiteLang.Main.Visitor.Type.Visitor;
@@ -33,7 +33,7 @@ namespace JiteLang.Main.Bound
 
         private readonly ParsedSyntaxTree _parsedSyntaxTree;
 
-        private readonly List<string> _diagnostics;
+        private readonly HashSet<string> _diagnostics;
         private readonly BindingContext _bindingContext;
 
         private readonly Dictionary<string, TypeSymbol> _types;
@@ -44,7 +44,7 @@ namespace JiteLang.Main.Bound
 
             _bindingContext = new BindingContext(new());
 
-            _diagnostics = new List<string>(parsedSyntaxTree.Errors);
+            _diagnostics = new(parsedSyntaxTree.Errors);
             _expressionVisitor = expressionVisitor;
             _types = new();
         }
@@ -55,8 +55,8 @@ namespace JiteLang.Main.Bound
 
             _bindingContext = new BindingContext(new());
 
-            _diagnostics = new List<string>(parsedSyntaxTree.Errors);
-            _expressionVisitor = new(AddError);
+            _diagnostics = new HashSet<string>(parsedSyntaxTree.Errors);
+            _expressionVisitor = new(_bindingContext, AddError, ResolveType);
             _types = new();
         }
 
@@ -79,8 +79,8 @@ namespace JiteLang.Main.Bound
         public virtual BoundNamespaceDeclaration BindNamespaceDeclaration(NamespaceDeclarationSyntax namespaceDeclaration, TypeScope scope, BoundNode parent)
         {
             var builtIdentifierExpression = BindIdentifierExpression(namespaceDeclaration.Identifier, scope, parent);
-
             BoundNamespaceDeclaration builtNamespaceDeclaration = new(parent, builtIdentifierExpression);
+            builtNamespaceDeclaration.Identifier.Parent = builtNamespaceDeclaration;
 
             foreach (var classDeclaration in namespaceDeclaration.Body.Members)
             {
@@ -92,7 +92,7 @@ namespace JiteLang.Main.Bound
 
         public virtual BoundClassDeclaration BindClassDeclaration(ClassDeclarationSyntax classDeclaration, TypeScope scope, BoundNode parent) 
         {
-            CreateType(classDeclaration);
+            var classType = CreateType(classDeclaration);
 
             var methods = classDeclaration.Body.Members.Where(x => x.Kind == SyntaxKind.MethodDeclaration)
                 .Cast<MethodDeclarationSyntax>().ToFrozenDictionary(k => k.Identifier.Text, v => CreateMethodScope(v, scope, null));
@@ -100,7 +100,7 @@ namespace JiteLang.Main.Bound
             TypeScope newScope = new(scope);
 
             var builtIdentifierExpression = BindIdentifierExpression(classDeclaration.Identifier, newScope, null);
-            BoundClassDeclaration boundClassDeclaration = new(parent, builtIdentifierExpression);
+            BoundClassDeclaration boundClassDeclaration = new(parent, classType, builtIdentifierExpression);
             boundClassDeclaration.Identifier.Parent = boundClassDeclaration;
 
             foreach (var item in classDeclaration.Body.Members)
@@ -116,8 +116,8 @@ namespace JiteLang.Main.Bound
 
                         boundClassDeclaration.Body.Members.Add(BindMethodDeclaration(method, methodScope, boundClassDeclaration.Body));
                         break;
-                    case SyntaxKind.VariableDeclaration:
-                        boundClassDeclaration.Body.Members.Add(BindVariableDeclaration((VariableDeclarationSyntax)item, newScope, boundClassDeclaration.Body));
+                    case SyntaxKind.FieldDeclaration:
+                        boundClassDeclaration.Body.Members.Add(BindFieldDeclaration((FieldDeclarationSyntax)item, newScope, boundClassDeclaration.Body));
                         break;
                     default:
                         throw new UnreachableException();
@@ -133,37 +133,60 @@ namespace JiteLang.Main.Bound
 
                 Dictionary<string, TypeMethodParameter> @params = new(methodDeclaration.Params.Count);
 
+                var methodTypeName = methodDeclaration.Identifier.Text + methodDeclaration.ReturnType.Text;
+
                 foreach (var item in methodDeclaration.Params)
                 {
+                    var name = item.Identifier.Text;
+
                     var param = BindMethodParameter(item, newScope, parent);
-                    @params.Add(item.Identifier.Text, new(param.Type));
-                    newScope.Variables.Add(item.Identifier.Text, new(param.Type));
+                    @params.Add(name, new(param.Type, name));
+                    newScope.Variables.Add(name, new(param.Type, name));
+                    methodTypeName += param.Type.Text;
                 }
 
-                scope.AddMethod(methodDeclaration.Identifier.Text, ResolveType(methodDeclaration.ReturnType), @params);
+                var delegateMethodType = (DelegateTypeSymbol)_types[methodTypeName];
+
+                scope.AddMethod(methodDeclaration.Identifier.Text, delegateMethodType, @params);
                 return newScope;
             }
 
             TypeSymbol CreateType(ClassDeclarationSyntax classDeclaration)
             {
                 var methods = classDeclaration.Body.Members.Where(x => x.Kind == SyntaxKind.MethodDeclaration).Cast<MethodDeclarationSyntax>();
+                var fields = classDeclaration.Body.Members.Where(x => x.Kind == SyntaxKind.FieldDeclaration).Cast<FieldDeclarationSyntax>();
 
-                var methodSymbolsDict = methods.ToImmutableDictionary(k => k.Identifier.Text, v =>
+                var classFullName = classDeclaration.GetFullName();
+
+                var typeSymbol = new ClassTypeSymbol(classFullName, classDeclaration.Identifier.Text, new List<FieldSymbol>(), new List<MethodSymbol>());
+
+                if (!_types.TryAdd(typeSymbol.Text, typeSymbol))
                 {
-                    var mParams = v.Params.Select(p => new ParameterSymbol(new Lazy<TypeSymbol>(() => ResolveType(p.Type)))).ToImmutableList();
+                    AddError($"The type {typeSymbol.Text} is already defined", classDeclaration.Position);
+                }
 
-                    var mReturnType = new Lazy<TypeSymbol>(() => ResolveType(v.ReturnType));
-                    return new MethodSymbol(
-                        mReturnType,
-                        mParams
-                    );
-                });
-
-                var typeSymbol = new TypeSymbol(classDeclaration.Identifier.Text, true, methodSymbolsDict);
-
-                if (!_types.TryAdd(classDeclaration.Identifier.Text, typeSymbol))
+                foreach (var field in fields)
                 {
-                    AddError($"The type {classDeclaration.Identifier.Text} is already defined", classDeclaration.Position);
+                    var fieldSymbol = new FieldSymbol(field.Identifier.Text, ResolveType(field.Variable.Type));
+                    typeSymbol.Fields.Add(fieldSymbol);
+                }
+
+                foreach (var method in methods)
+                {
+                    var mParams = method.Params.Select(p => new ParameterSymbol(ResolveType(p.Type))).ToImmutableList();
+                    var returnType = ResolveType(method.ReturnType);
+                    var methodTypeName = mParams.Aggregate(method.Identifier.Text + returnType.Text, (acc, item) => acc + item.Type.Text);
+
+                    if (!_types.TryGetValue(methodTypeName, out var methodType))
+                    {
+                        methodType = new DelegateTypeSymbol(methodTypeName, methodTypeName, returnType, mParams);
+                        _types.Add(methodTypeName, methodType);
+                    }
+
+                    typeSymbol.Methods.Add(new MethodSymbol(
+                        method.Identifier.Text,
+                        (DelegateTypeSymbol)methodType
+                    ));
                 }
 
                 return typeSymbol;
@@ -222,7 +245,7 @@ namespace JiteLang.Main.Bound
                 }
                 else
                 {
-                    var isSameReturnType = methodDeclaration.ReturnType.IsEqualsNotNone(predefinedExternMethod.ReturnType);
+                    var isSameReturnType = methodDeclaration.ReturnType.IsEqualsNotError(predefinedExternMethod.ReturnType);
                     if (!isSameReturnType)
                     {
                         AddError($"The extern method '{methodDeclaration.Identifier.Text}' must returns '{predefinedExternMethod.ReturnType.Text}'", methodDeclaration.Identifier.Position);
@@ -242,7 +265,7 @@ namespace JiteLang.Main.Bound
 
                             var methodParam = methodDeclaration.Params[i];
 
-                            if (!externParamType.IsEqualsNotNone(methodParam.Type))
+                            if (!externParamType.IsEqualsNotError(methodParam.Type))
                             {
                                 AddError($"Expected type {externParamType.Text}", methodParam.Position);
                             }
@@ -267,10 +290,10 @@ namespace JiteLang.Main.Bound
             return builtParameter;
         }
 
-        public virtual BoundVariableDeclaration BindVariableDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, TypeScope scope, BoundNode parent)
+        public virtual BoundLocalDeclaration BindLocalDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, TypeScope scope, BoundNode parent)
         {
             TypeSymbol variableType = ResolveType(variableDeclarationSyntax.Type);
-            BoundVariableDeclaration builtVariable = new(
+            BoundLocalDeclaration builtVariable = new(
                 parent,
                 BindIdentifierExpression(variableDeclarationSyntax.Identifier, scope, null),
                 variableType
@@ -291,6 +314,38 @@ namespace JiteLang.Main.Bound
             }
 
             return builtVariable;
+        }
+
+        public virtual BoundFieldDeclaration BindFieldDeclaration(FieldDeclarationSyntax fieldDeclarationSyntax, TypeScope scope, BoundNode parent)
+        {
+            var parentClass = (BoundClassDeclaration)parent.Parent!;
+
+            TypeSymbol fieldType = ResolveType(fieldDeclarationSyntax.Variable.Type);
+
+            var identifier = BindIdentifierExpression(fieldDeclarationSyntax.Variable.Identifier, scope, null!);
+            BoundFieldDeclaration fieldDeclaration = new(parent, identifier, fieldType);
+            identifier.Parent = fieldDeclaration;
+
+            if (fieldDeclarationSyntax.Variable.InitialValue is not null)
+            {
+                var fieldValueType = _expressionVisitor.VisitExpression(fieldDeclarationSyntax.Variable.InitialValue, scope);
+                var initialValue = BindExpression(fieldDeclarationSyntax.Variable.InitialValue, scope, parent);
+
+                if (!fieldValueType.Equals(fieldType) && !_bindingContext.ConversionTable.TryGetImplicitConversion(fieldValueType, fieldType, out var conversion))
+                {
+                    AddError($"Cannot implicit convert '{fieldValueType.Text}' to type '{fieldType.Text}'", fieldDeclarationSyntax.Variable.Position);
+                }
+
+                BoundMemberExpression memberExpression = new(parentClass.Initializer, null!, identifier);
+                memberExpression.Left = new BoundIdentifierExpression(memberExpression, "this", default);
+
+                BoundAssignmentExpression fieldInitializer = new(parentClass.Initializer, memberExpression, BoundKind.EqualsToken, initialValue);
+
+                //Dont add after the return
+                parentClass.Initializer.Body.Members.Insert(parentClass.Initializer.Body.Members.Count - 1, fieldInitializer);
+            }
+
+            return fieldDeclaration;
         }
 
         #endregion Declarations
@@ -399,7 +454,7 @@ namespace JiteLang.Main.Bound
 
                 var returnType = _expressionVisitor.VisitExpression(returnStatementSyntax.ReturnValue, scope);
 
-                if (_currentMethod?.ReturnType.IsEqualsNotNone(returnType) == false)
+                if (_currentMethod?.ReturnType.IsEqualsNotError(returnType) == false)
                 {
                     AddError($"Method {_currentMethod.Identifier.Text} must returns {_currentMethod.ReturnType.Text}", builtReturn.Position);
                 }
@@ -438,6 +493,7 @@ namespace JiteLang.Main.Bound
                 SyntaxKind.IdentifierExpression => BindIdentifierExpression((IdentifierExpressionSyntax)expressionSyntax, scope, parent),
                 SyntaxKind.AssignmentExpression => BindAssignmentExpression((AssignmentExpressionSyntax)expressionSyntax, scope, parent),
                 SyntaxKind.CallExpression => BindCallExpression((CallExpressionSyntax)expressionSyntax, scope, parent),
+                SyntaxKind.NewExpression => BindNewExpression((NewExpressionSyntax)expressionSyntax, scope, parent),
                 _ => throw new UnreachableException(),
             };
         }
@@ -452,26 +508,26 @@ namespace JiteLang.Main.Bound
             {
                 case SyntaxKind.StringLiteralToken:
                     var strTok = (SyntaxTokenWithValue<string>)literalExpressionSyntax.Value;
-                    constantValue = new ConstantValue(ConstantValueKind.String, strTok.Position, strTok.Value);
+                    constantValue = new ConstantValue(strTok.Position, strTok.Value);
                     break;
                 case SyntaxKind.CharLiteralToken:
                     var charTok = (SyntaxTokenWithValue<char>)literalExpressionSyntax.Value;
-                    constantValue = new ConstantValue(ConstantValueKind.Char, charTok.Position, charTok.Value);
+                    constantValue = new ConstantValue(charTok.Position, charTok.Value);
                     break;
                 case SyntaxKind.IntLiteralToken:
                     var intTok = (SyntaxTokenWithValue<int>)literalExpressionSyntax.Value;
-                    constantValue = new ConstantValue(ConstantValueKind.Int, intTok.Position, intTok.Value);
+                    constantValue = new ConstantValue(intTok.Position, intTok.Value);
                     break;
                 case SyntaxKind.LongLiteralToken:
                     var longTok = (SyntaxTokenWithValue<long>)literalExpressionSyntax.Value;
-                    constantValue = new ConstantValue(ConstantValueKind.Long, longTok.Position, longTok.Value);
+                    constantValue = new ConstantValue(longTok.Position, longTok.Value);
                     break;
                 case SyntaxKind.FalseLiteralToken:
                 case SyntaxKind.FalseKeyword:
                 case SyntaxKind.TrueLiteralToken:
                 case SyntaxKind.TrueKeyword:
                     var boolTok = (SyntaxTokenWithValue<bool>)literalExpressionSyntax.Value;
-                    constantValue = new ConstantValue(ConstantValueKind.Bool, boolTok.Position, boolTok.Value);
+                    constantValue = new ConstantValue(boolTok.Position, boolTok.Value);
                     break;
                 case SyntaxKind.NullLiteralToken:
                 case SyntaxKind.NullKeyword:
@@ -489,7 +545,13 @@ namespace JiteLang.Main.Bound
 
         public virtual BoundExpression BindMemberExpression(MemberExpressionSyntax memberExpressionSyntax, TypeScope scope, BoundNode parent)
         {
-            throw new NotImplementedException();
+            _expressionVisitor.VisitMemberExpression(memberExpressionSyntax, scope);
+
+            BoundMemberExpression boundMemberExpr = new(parent, null!, null!);
+            boundMemberExpr.Left = BindExpression(memberExpressionSyntax.Left, scope, boundMemberExpr);
+            boundMemberExpr.Right = BindIdentifierExpression(memberExpressionSyntax.Right, scope, boundMemberExpr);
+
+            return boundMemberExpr;
         }
 
         public virtual BoundExpression BindUnaryExpression(UnaryExpressionSyntax unaryExpressionSyntax, TypeScope scope, BoundNode parent)
@@ -504,6 +566,8 @@ namespace JiteLang.Main.Bound
 
         public virtual BoundExpression BindBinaryExpression(BinaryExpressionSyntax binaryExpressionSyntax, TypeScope scope, BoundNode parent) 
         {
+            _expressionVisitor.VisitBinaryExpression(binaryExpressionSyntax, scope);
+
             var left = BindExpression(binaryExpressionSyntax.Left, scope, parent);
             var right = BindExpression(binaryExpressionSyntax.Right, scope, parent);
 
@@ -514,6 +578,8 @@ namespace JiteLang.Main.Bound
 
         public virtual BoundExpression BindLogicalExpression(LogicalExpressionSyntax logicalExpressionSyntax, TypeScope scope, BoundNode parent)
         {
+            _expressionVisitor.VisitLogicalExpression(logicalExpressionSyntax, scope);
+
             var left = BindExpression(logicalExpressionSyntax.Left, scope, parent);
             var right = BindExpression(logicalExpressionSyntax.Right, scope, parent);
 
@@ -524,28 +590,23 @@ namespace JiteLang.Main.Bound
 
         public virtual BoundExpression BindCallExpression(CallExpressionSyntax callExpressionSyntax, TypeScope scope, BoundNode parent)
         {
+            var methodReturnType = _expressionVisitor.VisitCallExpression(callExpressionSyntax, scope);
+
             var builtCaller = BindExpression(callExpressionSyntax.Caller, scope, parent);
             BoundCallExpression builtCallExpression = new(parent, builtCaller);
 
-            var method = scope.GetMethod(((BoundIdentifierExpression)builtCaller).Text);
-
-            if (method.Params.Count != callExpressionSyntax.Args.Count)
+            if (methodReturnType.IsError())
             {
-                AddError($"Expected {method.Params.Count} parameters, but got {callExpressionSyntax.Args.Count}", callExpressionSyntax.Position);
+                return builtCallExpression;
             }
-            else
+
+            var methodType = (DelegateTypeSymbol)_expressionVisitor.VisitExpression(callExpressionSyntax.Caller, scope);
+
+            if (methodType.Parameters.Count == callExpressionSyntax.Args.Count)
             {
                 for (int i = 0; i < callExpressionSyntax.Args.Count; i++)
                 {
                     var item = callExpressionSyntax.Args[i];
-
-                    var itemType = _expressionVisitor.VisitExpression(item, scope);
-                    var methodParamType = method.Params.ElementAtOrDefault(i).Value.Type;
-
-                    if (!itemType.Equals(methodParamType) && !_bindingContext.ConversionTable.TryGetImplicitConversion(itemType, methodParamType, out var conversion))
-                    {
-                        AddError($"Argument {i + 1} cannot be implicitly converted from type '{itemType.Text}' to type '{methodParamType.Text}'", item.Position);
-                    }
 
                     var arg = BindExpression(item, scope, parent);
 
@@ -561,6 +622,33 @@ namespace JiteLang.Main.Bound
             BoundIdentifierExpression builtIdentifierExpression = new(parent, identifierExpressionSyntax.Text, identifierExpressionSyntax.Position);
             return builtIdentifierExpression;
         }
+        
+        public virtual BoundExpression BindNewExpression(NewExpressionSyntax newExpressionSyntax, TypeScope scope, BoundNode parent)
+        {
+            var targetType = (MemberedTypeSymbol)_expressionVisitor.VisitNewExpression(newExpressionSyntax, scope);
+
+            var typeDeclaration = (ClassTypeSymbol)_types[targetType.Text];
+            
+            var newExpr = new BoundNewExpression(parent, targetType, null!);
+
+            var hasCtor = targetType.Constructors.Any(x => x.Parameters.Count == newExpressionSyntax.Args.Count);
+
+            if (hasCtor)
+            {
+                var args = new List<BoundExpression>(newExpressionSyntax.Args.Count);
+                for (int i = 0; i < newExpressionSyntax.Args.Count; i++)
+                {
+                    var item = newExpressionSyntax.Args[i];
+
+                    var itemType = _expressionVisitor.VisitExpression(item, scope);
+
+                    var arg = BindExpression(item, scope, parent);
+                    args.Add(arg);
+                }
+            }
+
+            return newExpr;
+        }
 
         #endregion Expressions
         protected virtual TypeSymbol ResolveType(TypeSyntax typeSyntax)
@@ -571,7 +659,12 @@ namespace JiteLang.Main.Bound
                 return predefinedTypeSymbol;
             }
 
-            var typeSymbol = _types[typeSyntax.Text];
+            if (_types.TryGetValue(typeSyntax.Text, out var typeSymbol))
+            {
+                return typeSymbol;
+            }
+
+            typeSymbol = _types.First(x => x.Value.Text == typeSyntax.Text).Value;
 
             return typeSymbol;
         }
@@ -580,7 +673,7 @@ namespace JiteLang.Main.Bound
         {
             return item.Kind switch
             {
-                SyntaxKind.VariableDeclaration => BindVariableDeclaration((VariableDeclarationSyntax)item, scope, parent),
+                SyntaxKind.VariableDeclaration => BindLocalDeclaration((VariableDeclarationSyntax)item, scope, parent),
                 SyntaxKind.CallExpression => BindCallExpression((CallExpressionSyntax)item, scope, parent),
                 SyntaxKind.ReturnStatement => BindReturnStatement((ReturnStatementSyntax)item, scope, parent),
                 SyntaxKind.IfStatement => BindIfStatement((IfStatementSyntax)item, scope, parent),

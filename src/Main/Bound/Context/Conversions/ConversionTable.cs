@@ -47,10 +47,13 @@ namespace JiteLang.Main.Bound.Context.Conversions
                 return true;
             }
 
-            if(to.IsSubClassOf(from))
+            if (from is ClassTypeSymbol fromClass && to is ClassTypeSymbol toClass)
             {
-                conversion = new(ConversionType.Implicit);
-                return true;
+                if (fromClass.IsSubClassOf(toClass))
+                {
+                    conversion = new(ConversionType.Implicit);
+                    return true;
+                }
             }
 
             return false;

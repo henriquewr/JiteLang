@@ -2,12 +2,10 @@
 
 namespace JiteLang.Main.Visitor.Type.Scope
 {
-    internal class TypeVariable
+    internal class TypeVariable : TypeIdentifier
     {
-        public TypeVariable(TypeSymbol varType)
+        public TypeVariable(TypeSymbol varType, string name) : base(varType, name)
         {
-            Type = varType;
         }
-        public TypeSymbol Type { get; set; }
     }
 }

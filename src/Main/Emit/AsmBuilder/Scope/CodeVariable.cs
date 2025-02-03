@@ -2,17 +2,13 @@
 
 namespace JiteLang.Main.AsmBuilder.Scope
 {
-    internal class CodeVariable
+    internal abstract class CodeVariable
     {
-        public CodeVariable(int stackLocation, TypeSymbol type, bool stackLocationIsPositive = default)
+        public CodeVariable(TypeSymbol type)
         {
-            InScopeStackLocation = stackLocation;
             Type = type;
-            StackLocationIsPositive = stackLocationIsPositive;
         }
         
-        public bool StackLocationIsPositive { get; set; }
-        public int InScopeStackLocation { get; set; }
         public TypeSymbol Type { get; set; }
     }
 }

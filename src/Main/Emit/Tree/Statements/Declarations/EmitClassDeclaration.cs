@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using JiteLang.Main.Emit.AsmBuilder.Scope;
+using JiteLang.Main.Shared.Type;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JiteLang.Main.Emit.Tree.Statements.Declarations
 {
@@ -10,13 +8,27 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
     {
         public override EmitKind Kind => EmitKind.ClassDeclaration;
 
-        public EmitClassDeclaration(EmitNode parent, string name) : base(parent)
+        public EmitClassDeclaration(EmitNode parent, TypeSymbol type, string name) : base(parent, name)
         {
-            Name = name;
             Body = new(this);
+            Type = type;
         }
 
-        public string Name { get; set; }
-        public EmitBlockStatement<EmitNode> Body { get; set; }
+        public EmitMethodDeclaration Initializer
+        {
+            get
+            {
+                return Body.Members.OfType<EmitMethodDeclaration>().First(x => x.IsInitializer);
+            }
+        }
+
+        public EmitBlockStatement<EmitNode, CodeField> Body { get; set; }
+        public TypeSymbol Type { get; set; }
+
+        public string GetFullName(char separator = '.')
+        {
+            var parentNamespace = (EmitNamespaceDeclaration)Parent.Parent!;
+            return $"{parentNamespace.Name}{separator}{Name}";
+        }
     }
 }

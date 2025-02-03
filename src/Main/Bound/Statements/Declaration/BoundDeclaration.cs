@@ -10,6 +10,6 @@ namespace JiteLang.Main.Bound.Statements.Declaration
             Position = identifier.Position;
         }
 
-        public BoundIdentifierExpression Identifier { get; init; }
+        public BoundIdentifierExpression Identifier { get; set; }
     }
 }

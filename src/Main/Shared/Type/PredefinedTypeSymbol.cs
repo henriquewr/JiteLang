@@ -13,24 +13,26 @@ namespace JiteLang.Main.Shared.Type
         Object,
     }
 
-    internal class PredefinedTypeSymbol : TypeSymbol
+    internal class PredefinedTypeSymbol : MemberedTypeSymbol
     {
-        private PredefinedTypeSymbol(string text, bool isReferenceType, PredefinedTypeKind predefinedTypeKind) : base(text, isReferenceType, null)
+        private PredefinedTypeSymbol(string text, bool isReferenceType, PredefinedTypeKind predefinedTypeKind) : base(text, text, isReferenceType, new(0), new(0))
         {
             Kind = predefinedTypeKind;
         }
 
         public readonly PredefinedTypeKind Kind;
-        public static readonly PredefinedTypeSymbol Int = new(SyntaxFacts.Int, false, PredefinedTypeKind.Int);
+
         public static readonly PredefinedTypeSymbol Void = new(SyntaxFacts.Void, false, PredefinedTypeKind.Void);
-        public static readonly PredefinedTypeSymbol Char = new(SyntaxFacts.Char, false, PredefinedTypeKind.Char);
-        public static readonly PredefinedTypeSymbol Long = new(SyntaxFacts.Long, false, PredefinedTypeKind.Long);
-        public static readonly PredefinedTypeSymbol Bool = new(SyntaxFacts.Bool, false, PredefinedTypeKind.Bool);
 
-        public static readonly PredefinedTypeSymbol String = new(SyntaxFacts.String, true, PredefinedTypeKind.String);
-        public static readonly PredefinedTypeSymbol Object = new(SyntaxFacts.Object, true, PredefinedTypeKind.Object);
+        public static readonly StructTypeSymbol Int = new(SyntaxFacts.Int, SyntaxFacts.Int, new(0), new(0));
+        public static readonly StructTypeSymbol Char = new(SyntaxFacts.Char, SyntaxFacts.Char, new(0), new(0));
+        public static readonly StructTypeSymbol Long = new(SyntaxFacts.Long, SyntaxFacts.Long, new(0), new(0));
+        public static readonly StructTypeSymbol Bool = new(SyntaxFacts.Bool, SyntaxFacts.Bool, new(0), new(0));
 
-        public static PredefinedTypeSymbol? FromText(string text)
+        public static readonly ClassTypeSymbol String = new(SyntaxFacts.String, SyntaxFacts.String, new(0), new(0));
+        public static readonly ClassTypeSymbol Object = new(SyntaxFacts.Object, SyntaxFacts.Object, new(0), new(0));
+
+        public static MemberedTypeSymbol? FromText(string text)
         {
             switch (text)
             {

@@ -9,11 +9,8 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
     internal class EmitParameterDeclaration : EmitDeclaration
     {
         public override EmitKind Kind => EmitKind.ParameterDeclaration;
-        public EmitParameterDeclaration(EmitNode parent, string text) : base(parent)
+        public EmitParameterDeclaration(EmitNode parent, string name) : base(parent, name)
         {
-            Text = text;
         }
-
-        public string Text { get; set; }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using JiteLang.Main.Bound.Expressions;
 using JiteLang.Main.LangParser.SyntaxNodes;
-using JiteLang.Main.PredefinedExternMethods;
 using JiteLang.Main.Shared.Type;
 using System.Collections.Generic;
 
@@ -41,5 +40,6 @@ namespace JiteLang.Main.Bound.Statements.Declaration
         public List<BoundParameterDeclaration> Params { get; set; }
         public BoundBlockStatement<BoundNode> Body { get; set; }
         public TypeSymbol ReturnType { get; set; }
+        public bool IsInitializer { get; set; }
     }
 }

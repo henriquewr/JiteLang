@@ -3,20 +3,20 @@ using System.Collections.Generic;
 
 namespace JiteLang.Main.Visitor.Type.Scope
 {
-    internal class TypeMethod
+    internal class TypeMethod : TypeIdentifier
     {
-        public TypeMethod(TypeSymbol returnType, Dictionary<string, TypeMethodParameter> @params)
+        public TypeMethod(DelegateTypeSymbol methodType, string name, Dictionary<string, TypeMethodParameter> @params) : base(methodType, name)
         {
-            ReturnType = returnType;
+            Type = methodType;
             Params = @params;
         }
 
-        public TypeMethod(TypeSymbol returnType) : this(returnType, new())
+        public TypeMethod(DelegateTypeSymbol methodType, string name) : this(methodType, name, new())
         {
         }
 
         public Dictionary<string, TypeMethodParameter> Params { get; set; }
 
-        public TypeSymbol ReturnType { get; set; }
+        public new DelegateTypeSymbol Type { get; set; }
     }
 }

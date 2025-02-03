@@ -15,5 +15,6 @@ namespace JiteLang.Main.Visitor.Type.Visitor
         T VisitIdentifierExpression(IdentifierExpressionSyntax identifierExpressionSyntax, TypeScope scope);
         T VisitCallExpression(CallExpressionSyntax callExpressionSyntax, TypeScope scope);
         T VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpressionSyntax, TypeScope scope);
+        T VisitNewExpression(NewExpressionSyntax newExpressionSyntax, TypeScope scope);
     }
 }

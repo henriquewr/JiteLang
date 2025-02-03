@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JiteLang.Main.Shared.Type;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,9 +10,10 @@ namespace JiteLang.Main.Emit.Tree.Expressions
     internal class EmitCastExpression : EmitExpression
     {
         public override EmitKind Kind => EmitKind.CastExpression;
-        public EmitCastExpression(EmitNode parent) : base(parent)
+        public override TypeSymbol Type { get; }
+        public EmitCastExpression(EmitNode parent, TypeSymbol type) : base(parent)
         {
-            
+            Type = type;
         }
     }
 }

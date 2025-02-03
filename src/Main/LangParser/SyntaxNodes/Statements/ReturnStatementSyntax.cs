@@ -12,11 +12,11 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
     {
         public override SyntaxKind Kind => SyntaxKind.ReturnStatement;
 
-        public ReturnStatementSyntax() 
+        public ReturnStatementSyntax(SyntaxNode parent) : base(parent)
         {
         }
 
-        public ReturnStatementSyntax(ExpressionSyntax returnValue)
+        public ReturnStatementSyntax(SyntaxNode parent, ExpressionSyntax returnValue) : base(parent)
         {
             ReturnValue = returnValue;
         }

@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using JiteLang.Main.Emit.AsmBuilder.Operands;
+﻿using JiteLang.Main.Emit.AsmBuilder.Operands;
 
 namespace JiteLang.Main.AsmBuilder.Instructions
 {
     internal class SingleOperandInstruction : Instruction
     {
+        protected override string GetDebuggerDisplay()
+        {
+            return $"{Type} {Operand.Value}";
+        }
+
         public SingleOperandInstruction(AsmInstructionType type, Operand operand)
         {
             Type = type;

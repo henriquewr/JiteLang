@@ -7,7 +7,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.LogicalExpression;
 
-        public LogicalExpressionSyntax(ExpressionSyntax left, LogicalOperatorKind operation, ExpressionSyntax right) 
+        public LogicalExpressionSyntax(SyntaxNode parent, ExpressionSyntax left, LogicalOperatorKind operation, ExpressionSyntax right) : base(parent)
         {
             Left = left;
             Operation = operation;

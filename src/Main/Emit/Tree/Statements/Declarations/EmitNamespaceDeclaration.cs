@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using JiteLang.Main.AsmBuilder.Scope;
 
 namespace JiteLang.Main.Emit.Tree.Statements.Declarations
 {
@@ -10,11 +6,11 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
     {
         public override EmitKind Kind => EmitKind.NamespaceDeclaration;
 
-        public EmitNamespaceDeclaration(EmitNode parent) : base(parent)
+        public EmitNamespaceDeclaration(EmitNode parent, string name) : base(parent, name)
         {
             Body = new(this);
         }
 
-        public EmitBlockStatement<EmitClassDeclaration> Body { get; set; }
+        public EmitBlockStatement<EmitClassDeclaration, CodeVariable> Body { get; set; }
     }
 }

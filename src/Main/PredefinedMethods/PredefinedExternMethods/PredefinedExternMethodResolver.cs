@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace JiteLang.Main.PredefinedExternMethods
+namespace JiteLang.Main.PredefinedExternMethods.PredefinedExternMethods
 {
     internal class PredefinedExternMethodResolver
     {

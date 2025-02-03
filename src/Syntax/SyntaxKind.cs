@@ -12,6 +12,9 @@ namespace JiteLang.Syntax
 
         /// <summary><c> , </c></summary>
         CommaToken,
+        /// <summary><c> . </c></summary>
+        DotToken,
+
         /// <summary><c> ( </c></summary>
         OpenParenToken,
         /// <summary><c> ) </c></summary>
@@ -168,6 +171,8 @@ namespace JiteLang.Syntax
         VariableDeclaration = 4004,
         /// <summary><c> </c></summary>
         ParameterDeclaration = 4005,
+        /// <summary><c> </c></summary>
+        FieldDeclaration = 4006,
 
 
         //Expressions: 5000 -> 6000
@@ -188,6 +193,8 @@ namespace JiteLang.Syntax
         CastExpression = 5008,        
         /// <summary><c> </c></summary>
         CallExpression = 5009,
+        /// <summary><c> </c></summary>
+        NewExpression = 5010,
 
         //Statements: 6000 -> 7000
         /// <summary><c> </c></summary>

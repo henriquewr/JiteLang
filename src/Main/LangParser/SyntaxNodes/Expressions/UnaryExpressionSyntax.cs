@@ -9,6 +9,10 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
 {
     internal class UnaryExpressionSyntax : ExpressionSyntax
     {
+        public UnaryExpressionSyntax(SyntaxNode parent) : base(parent)
+        {
+        }
+
         public override SyntaxKind Kind => SyntaxKind.UnaryExpression;
     }
 }

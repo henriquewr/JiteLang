@@ -1,5 +1,8 @@
-﻿using JiteLang.Main.Bound.TypeResolvers;
+﻿using JiteLang.Main.Bound.Context;
+using JiteLang.Main.Bound.Expressions;
+using JiteLang.Main.Bound.TypeResolvers;
 using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
+using JiteLang.Main.LangParser.Types;
 using JiteLang.Main.Shared;
 using JiteLang.Main.Shared.Type;
 using JiteLang.Main.Visitor.Type.Scope;
@@ -13,15 +16,23 @@ namespace JiteLang.Main.Visitor.Type.Visitor
     internal class ExpressionVisitor : IExpressionVisitor<TypeSymbol>
     {
         private readonly Action<string, SyntaxPosition> _addErrorFunc;
-
-        public ExpressionVisitor(Action<string, SyntaxPosition> addErrorFunc)
+        private readonly Func<TypeSyntax, TypeSymbol> _resolveTypeFunc;
+        private readonly BindingContext _bindingContext;
+        public ExpressionVisitor(BindingContext bindingContext, Action<string, SyntaxPosition> addErrorFunc, Func<TypeSyntax, TypeSymbol> resolveTypeFunc)
         {
             _addErrorFunc = addErrorFunc;
+            _resolveTypeFunc = resolveTypeFunc;
+            _bindingContext = bindingContext;
         }
 
-        protected void AddError(string errorMessage, in SyntaxPosition position)
+        protected virtual void AddError(string errorMessage, SyntaxPosition position)
         {
             _addErrorFunc(errorMessage, position);
+        }
+       
+        protected virtual TypeSymbol ResolveType(TypeSyntax typeSyntax)
+        {
+            return _resolveTypeFunc(typeSyntax);
         }
 
         public TypeSymbol VisitExpression(ExpressionSyntax expressionSyntax, TypeScope scope)
@@ -55,6 +66,9 @@ namespace JiteLang.Main.Visitor.Type.Visitor
                 case SyntaxKind.AssignmentExpression:
                     return VisitAssignmentExpression((AssignmentExpressionSyntax)expressionSyntax, scope);
 
+                case SyntaxKind.NewExpression:
+                    return VisitNewExpression((NewExpressionSyntax)expressionSyntax, scope);
+
                 default:
                     throw new UnreachableException();
             }
@@ -62,31 +76,35 @@ namespace JiteLang.Main.Visitor.Type.Visitor
 
         public TypeSymbol VisitCallExpression(CallExpressionSyntax callExpressionSyntax, TypeScope scope)
         {
-            var method = scope.GetMethod(((IdentifierExpressionSyntax)callExpressionSyntax.Caller).Text);
+            var callerType = VisitExpression(callExpressionSyntax.Caller, scope);
 
-            if (method.Params.Count != callExpressionSyntax.Args.Count)
+            if (callerType is not DelegateTypeSymbol callerTypeDelegate)
             {
-                AddError($"Expected {method.Params.Count} parameters, but got {callExpressionSyntax.Args.Count}", callExpressionSyntax.Position);
+                AddError($"The type {callerType.Text} is not a method type", callExpressionSyntax.Position);
+                return ErrorTypeSymbol.Instance;
+            }
+
+            if (callerTypeDelegate.Parameters.Count != callExpressionSyntax.Args.Count)
+            {
+                AddError($"Expected {callerTypeDelegate.Parameters.Count} parameters, but got {callExpressionSyntax.Args.Count}", callExpressionSyntax.Position);
             }
             else
             {
                 for (int i = 0; i < callExpressionSyntax.Args.Count; i++)
                 {
-                    var argItem = callExpressionSyntax.Args[i];
+                    var item = callExpressionSyntax.Args[i];
 
-                    var argType = VisitExpression(argItem, scope);
+                    var itemType = VisitExpression(item, scope);
+                    var methodParamType = callerTypeDelegate.Parameters[i].Type;
 
-                    var paramItem = method.Params.ElementAt(i);
-                    var paramItemType = paramItem.Value.Type;
-
-                    if (!argType.IsEqualsNotNone(paramItemType))
+                    if (!itemType.Equals(methodParamType) && !_bindingContext.ConversionTable.TryGetImplicitConversion(itemType, methodParamType, out var conversion))
                     {
-                        AddError($"Expected type {paramItemType.Text}", argItem.Position);
+                        AddError($"Argument {i + 1} cannot be implicitly converted from type '{itemType.Text}' to type '{methodParamType.Text}'", item.Position);
                     }
                 }
             }
 
-            return method.ReturnType;
+            return callerTypeDelegate.ReturnType;
         }
 
         public TypeSymbol VisitAssignmentExpression(AssignmentExpressionSyntax assignmentExpressionSyntax, TypeScope scope)
@@ -94,10 +112,10 @@ namespace JiteLang.Main.Visitor.Type.Visitor
             var rightType = VisitExpression(assignmentExpressionSyntax.Right, scope);
             var leftType = VisitExpression(assignmentExpressionSyntax.Left, scope);
 
-            if (!rightType.IsEqualsNotNone(leftType))
+            if (!rightType.IsEqualsNotError(leftType))
             {
                 AddError($"Cannot implicit convert '{leftType.Text}' to type '{rightType.Text}'", assignmentExpressionSyntax.Position);
-                return TypeSymbol.None;
+                return ErrorTypeSymbol.Instance;
             }
 
             return rightType;
@@ -110,7 +128,7 @@ namespace JiteLang.Main.Visitor.Type.Visitor
 
             var resultType = BinaryExprTypeResolver.Resolve(leftType, binaryExpressionSyntax.Operation, rightType);
 
-            if (resultType.Equals(TypeSymbol.None))
+            if (resultType.IsError())
             {
                 AddError($"Cannot implicit convert '{leftType.Text}' to type '{rightType.Text}'", binaryExpressionSyntax.Left.Position);
             }
@@ -125,8 +143,8 @@ namespace JiteLang.Main.Visitor.Type.Visitor
 
         public TypeSymbol VisitIdentifierExpression(IdentifierExpressionSyntax identifierExpressionSyntax, TypeScope scope)
         {
-            var variable = scope.GetVariable(identifierExpressionSyntax.Text);
-            return variable.Type;
+            var identifier = scope.GetIdentifier(identifierExpressionSyntax.Text)!;
+            return identifier.Type;
         }
 
         public TypeSymbol VisitLiteralExpression(LiteralExpressionSyntax literalExpressionSyntax, TypeScope scope)
@@ -161,7 +179,7 @@ namespace JiteLang.Main.Visitor.Type.Visitor
 
             var resultType = LogicalExprTypeResolver.Resolve(leftType, logicalExpressionSyntax.Operation, rightType);
 
-            if (resultType.Equals(TypeSymbol.None))
+            if (resultType.IsError())
             {
                 AddError($"Operator not defined for '{leftType.Text}' and '{rightType.Text}'", logicalExpressionSyntax.Left.Position);
             }
@@ -171,12 +189,69 @@ namespace JiteLang.Main.Visitor.Type.Visitor
 
         public TypeSymbol VisitMemberExpression(MemberExpressionSyntax memberExpressionSyntax, TypeScope scope)
         {
-            throw new NotImplementedException();
+            var leftType = VisitExpression(memberExpressionSyntax.Left, scope);
+
+            if (leftType is not MemberedTypeSymbol)
+            {
+                throw new Exception("isnt membered");
+            }
+
+            var leftMemberedType = (MemberedTypeSymbol)leftType;
+
+            var rightMember = leftMemberedType.GetTypedMembers().FirstOrDefault(x => x.Name == memberExpressionSyntax.Right.Text);
+
+            if (rightMember is null)
+            {
+                if (!leftType.IsError())
+                {
+                    AddError($"The type '{leftType.Text}' does not have any member called '{memberExpressionSyntax.Right.Text}'", memberExpressionSyntax.Right.Position);
+                }
+
+                return ErrorTypeSymbol.Instance;
+            }
+
+            return rightMember.Type;
         }
 
         public TypeSymbol VisitUnaryExpression(UnaryExpressionSyntax unaryExpressionSyntax, TypeScope scope)
         {
             throw new NotImplementedException();
+        }
+
+        public TypeSymbol VisitNewExpression(NewExpressionSyntax newExpressionSyntax, TypeScope scope)
+        {
+            var targetType = ResolveType(newExpressionSyntax.Type);
+
+            if (targetType is not MemberedTypeSymbol)
+            {
+                throw new Exception("isnt membered");
+            }
+
+            var targetMemberedType = (MemberedTypeSymbol)targetType;
+
+            var targetCtor = targetMemberedType.Constructors.Find(x => x.Parameters.Count == newExpressionSyntax.Args.Count);
+
+            if (targetCtor is null)
+            {
+                AddError($"The type '{targetMemberedType.Text}' does not have any constructor with {newExpressionSyntax.Args.Count} arguments", newExpressionSyntax.Position);
+            }
+            else
+            {
+                for (int i = 0; i < newExpressionSyntax.Args.Count; i++)
+                {
+                    var item = newExpressionSyntax.Args[i];
+
+                    var itemType = VisitExpression(item, scope);
+                    var methodParamType = targetCtor.Parameters[i].Type;
+
+                    if (!itemType.Equals(methodParamType) && !_bindingContext.ConversionTable.TryGetImplicitConversion(itemType, methodParamType, out var conversion))
+                    {
+                        AddError($"Argument {i + 1} cannot be implicitly converted from type '{itemType.Text}' to type '{methodParamType.Text}'", item.Position);
+                    }
+                }
+            }
+
+            return targetMemberedType;
         }
     }
 }

@@ -17,5 +17,22 @@ namespace JiteLang.Main.Emit.Tree
         public EmitNode Parent { get; set; }
 
         public abstract EmitKind Kind { get; }
+
+        public T? GetFirstOrDefaultOfType<T>()
+        {
+            var currentParent = Parent;
+
+            while (currentParent != null)
+            { 
+                if (currentParent is T firstOfType)
+                {
+                    return firstOfType;
+                }
+
+                currentParent = currentParent.Parent;
+            }
+
+            return default;
+        }
     }
 }

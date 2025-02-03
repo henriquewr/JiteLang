@@ -9,7 +9,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
 {
     internal class LiteralExpressionSyntax : ExpressionSyntax
     {
-        public LiteralExpressionSyntax(SyntaxToken value) 
+        public LiteralExpressionSyntax(SyntaxNode parent, SyntaxToken value) : base(parent)
         {
             Value = value;
             Position = value.Position;

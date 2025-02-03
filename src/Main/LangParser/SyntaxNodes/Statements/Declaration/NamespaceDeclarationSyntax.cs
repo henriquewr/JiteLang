@@ -6,11 +6,12 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
 {
     internal class NamespaceDeclarationSyntax : DeclarationSyntax
     {
-        public NamespaceDeclarationSyntax(IdentifierExpressionSyntax identifier) : base(identifier)
+        public NamespaceDeclarationSyntax(SyntaxNode parent, IdentifierExpressionSyntax identifier) : base(parent, identifier)
         {
+            Body = new(this);
         }
 
         public override SyntaxKind Kind => SyntaxKind.NamespaceDeclaration;
-        public BlockStatement<ClassDeclarationSyntax> Body { get; set; } = new();
+        public BlockStatement<ClassDeclarationSyntax> Body { get; set; }
     }
 }

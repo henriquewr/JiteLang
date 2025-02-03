@@ -1,14 +1,15 @@
-﻿using JiteLang.Main.Shared;
+﻿using JiteLang.Main.Emit.AsmBuilder.Scope;
+using JiteLang.Main.Shared;
 using JiteLang.Main.Shared.Type;
 using System;
 using System.Collections.Generic;
 
 namespace JiteLang.Main.AsmBuilder.Scope
 {
-    internal class CodeScope : IScope<string, CodeVariable, string, CodeMethod, CodeScope>
+    internal class CodeScope : IScope<CodeLocal, CodeMethod, CodeScope>
     {
         public CodeScope(CodeScope parent,
-            Dictionary<string, CodeVariable> variables,
+            Dictionary<string, CodeLocal> variables,
             Dictionary<string, CodeMethod> methods,
             int bytesAllocated)
         {
@@ -30,13 +31,9 @@ namespace JiteLang.Main.AsmBuilder.Scope
         {
         }
 
-        public Dictionary<string, CodeVariable> Variables { get; set; }
+        public Dictionary<string, CodeLocal> Variables { get; set; }
         public Dictionary<string, CodeMethod> Methods { get; set; }
         public CodeScope? Parent { get; set; }
-        public void SetParent(IScope<string, CodeVariable, string, CodeMethod, CodeScope> parent)
-        {
-            Parent = (CodeScope)parent;
-        }
 
         public static CodeScope CreateGlobal()
         {
@@ -102,12 +99,12 @@ namespace JiteLang.Main.AsmBuilder.Scope
             throw new KeyNotFoundException($"Method '{key}' not found in the current or parent scopes.");
         }
 
-        public CodeVariable GetVariable(string key)
+        public CodeLocal GetVariable(string key)
         {
             return GetVariable(key, out _);
         }
 
-        public CodeVariable GetVariable(string key, out int stackOffsetToVariable)
+        public CodeLocal GetVariable(string key, out int stackOffsetToVariable)
         {
             const int PushRbpLength = 8;
 
@@ -156,7 +153,7 @@ namespace JiteLang.Main.AsmBuilder.Scope
             }
         }
 
-        public CodeVariable AddVariable(string key, TypeSymbol type, bool isPositiveStackLocation)
+        public CodeLocal AddVariable(string key, TypeSymbol type, bool isPositiveStackLocation)
         {
             int stackLocation;
             if (isPositiveStackLocation)
@@ -170,7 +167,7 @@ namespace JiteLang.Main.AsmBuilder.Scope
                 stackLocation = DownStackPosition;
             }
 
-            var variable = new CodeVariable(stackLocation, type, isPositiveStackLocation);
+            var variable = new CodeLocal(stackLocation, type);
 
             Variables.Add(key, variable);
 

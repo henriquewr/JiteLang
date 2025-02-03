@@ -25,27 +25,27 @@ namespace JiteLang.Main.Shared
             Text = text;
         }
 
-        public ConstantValue(ConstantValueKind kind, SyntaxPosition position, int value) : this(kind, position, value.ToString(), false)
+        public ConstantValue(SyntaxPosition position, int value) : this(ConstantValueKind.Int, position, value.ToString(), false)
         {
             IntValue = value;
         }
 
-        public ConstantValue(ConstantValueKind kind, SyntaxPosition position, string value) : this(kind, position, value, false)
+        public ConstantValue(SyntaxPosition position, string value) : this(ConstantValueKind.String, position, value, false)
         {
             StringValue = value;
         }
 
-        public ConstantValue(ConstantValueKind kind, SyntaxPosition position, bool value) : this(kind, position, value.ToString(), false)
+        public ConstantValue(SyntaxPosition position, bool value) : this(ConstantValueKind.Bool, position, value.ToString(), false)
         {
             BoolValue = value;
         }   
 
-        public ConstantValue(ConstantValueKind kind, SyntaxPosition position, long value) : this(kind, position, value.ToString(), false)
+        public ConstantValue(SyntaxPosition position, long value) : this(ConstantValueKind.Long, position, value.ToString(), false)
         {
             LongValue = value;
         }
 
-        public ConstantValue(ConstantValueKind kind, SyntaxPosition position, char value) : this(kind, position, value.ToString(), false)
+        public ConstantValue(SyntaxPosition position, char value) : this(ConstantValueKind.Char, position, value.ToString(), false)
         {
             CharValue = value;
         }
@@ -71,13 +71,13 @@ namespace JiteLang.Main.Shared
 
         public SyntaxPosition Position { get; set; }
 
-        public PredefinedTypeSymbol Type => GetTypeFromConstantValue(Kind);
+        public MemberedTypeSymbol Type => GetTypeFromConstantValue(Kind);
 
-        public static PredefinedTypeSymbol GetTypeFromConstantValue(ConstantValueKind constantValueKind)
+        public static MemberedTypeSymbol GetTypeFromConstantValue(ConstantValueKind constantValueKind)
         {
             var type = constantValueKind switch
             {
-                ConstantValueKind.String => PredefinedTypeSymbol.String,
+                ConstantValueKind.String => (MemberedTypeSymbol)PredefinedTypeSymbol.String,
                 ConstantValueKind.Char => PredefinedTypeSymbol.Char,
                 ConstantValueKind.Int => PredefinedTypeSymbol.Int,
                 ConstantValueKind.Bool => PredefinedTypeSymbol.Bool,

@@ -10,8 +10,12 @@ using JiteLang.Main.Emit.Tree.Expressions;
 using JiteLang.Main.Emit.Tree;
 using JiteLang.Main.Emit.AsmBuilder.Builder.Abstractions;
 using JiteLang.Main.Emit.AsmBuilder.Operands;
-using JiteLang.Main.PredefinedExternMethods;
+using JiteLang.Main.Emit.Tree.Utils;
+using JiteLang.Main.Shared.Type;
 using System.Linq;
+using JiteLang.Main.Emit.AsmBuilder.Scope;
+using JiteLang.Main.PredefinedExternMethods.PredefinedExternMethods;
+using JiteLang.Main.PredefinedMethods;
 
 namespace JiteLang.Main.Emit.AsmBuilder.Visitor
 {
@@ -43,6 +47,8 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
             instructions.Add(_asmBuilder.Extern(new Operand("GetStdHandle")));
             instructions.Add(_asmBuilder.Extern(new Operand("WriteFile")));
 
+            instructions.AddRange(GenPredefinedMethods());
+
             instructions.Add(_asmBuilder.Global(new Operand("_start")));
             instructions.Add(_asmBuilder.Label(new Operand("_start")));
             instructions.Add(_asmBuilder.Call(new Operand("Main")));
@@ -54,6 +60,15 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
             return instructions;
         }
 
+        public List<Instruction> GenPredefinedMethods()
+        {
+            var instructions = new List<Instruction>();
+
+            instructions.AddRange(Method_AllocateReadWriteMemory.GenerateInstructions(_asmBuilderAbstractions, _asmBuilder));
+
+            return instructions;
+        }
+
         public List<Instruction> VisitClassDeclaration(EmitClassDeclaration classDeclaration)
         {
             var instructions = new List<Instruction>();
@@ -62,8 +77,8 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
             {
                 switch (item.Kind)
                 {
-                    case EmitKind.VariableDeclaration:
-                        instructions.AddRange(VisitVariableDeclaration((EmitVariableDeclaration)item));
+                    case EmitKind.FieldDeclaration:
+                        instructions.AddRange(VisitFieldDeclaration((EmitFieldDeclaration)item));
                         break;
                     case EmitKind.MethodDeclaration:
                         instructions.AddRange(VisitMethodDeclaration((EmitMethodDeclaration)item));
@@ -95,7 +110,7 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
 
                         var strVar = methodDeclaration.Params[0];
 
-                        var pointerLocation = GetSizedRbpPosStr(methodDeclaration.Body.Variables[strVar.Text].InScopeStackLocation);
+                        var pointerLocation = GetSizedRbpPosStr(methodDeclaration.Body.Variables[strVar.Name].InScopeStackLocation);
                         var lengthOperand = new Operand($"[rdx - {8}]");
 
                         var printInstructions = Method_Print.GenerateInstructions(_asmBuilder, new Operand(pointerLocation), lengthOperand, isWin);
@@ -150,22 +165,30 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
             return instructions;
         }
 
-        public List<Instruction> VisitVariableDeclaration(EmitVariableDeclaration variableDeclaration)
+        public List<Instruction> VisitLocalDeclaration(EmitLocalDeclaration localDeclaration)
         {
             var instructions = new List<Instruction>();
 
-            if (variableDeclaration.InitialValue is not null)
+            if (localDeclaration.InitialValue is not null)
             {
-                instructions.AddRange(VisitExpression(variableDeclaration.InitialValue));
+                instructions.AddRange(VisitExpression(localDeclaration.InitialValue));
                 instructions.Add(_asmBuilder.Pop(Operand.Rax));
 
-                var variable = variableDeclaration.GetVariable();
+                var variable = localDeclaration.GetVariable();
                 var loc = GetSizedRbpPosStr(variable.InScopeStackLocation);
                 instructions.Add(_asmBuilder.Mov(new Operand(loc), Operand.Rax));
             }
 
             return instructions;
         }
+
+        public List<Instruction> VisitFieldDeclaration(EmitFieldDeclaration fieldDeclaration)
+        {
+            var instructions = new List<Instruction>();
+
+            return instructions;
+        }
+
         #endregion Declarations
 
         #region Statements
@@ -186,32 +209,22 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
             return instructions;
         }
 
-        public List<Instruction> VisitConditionStatement(EmitConditionStatement conditionStatement)
-        {
-            var instructions = VisitExpression(conditionStatement.Condition);
-
-            instructions.Add(_asmBuilder.Pop(Operand.Rax));
-            instructions.Add(_asmBuilder.Test(Operand.Rax, Operand.Rax));
-
-            var jumpFalseLabel = new Operand(conditionStatement.JumpIfFalse.Label.Name);
-            instructions.Add(_asmBuilder.Je(jumpFalseLabel));
-
-            return instructions;
-        }
-
         public List<Instruction> VisitIfStatement(EmitIfStatement ifStatement)
         {
-            var ifEndLabel = new Operand(ifStatement.ConditionStatement.JumpIfFalse.Label.Name);
+            var ifEndLabel = new Operand(ifStatement.Condition.JumpIfFalse.Label.Name);
             var ifExitLabel = new Operand(ifStatement.LabelExit.Name);
 
-            var instructions = VisitConditionStatement(ifStatement.ConditionStatement);
+            var instructions = VisitCondition(ifStatement.Condition);
 
             foreach (var item in ifStatement.Body.Members)
             {
                 instructions.AddRange(VisitDefaultBlock(item));
             }
 
-            instructions.Add(_asmBuilder.Jmp(ifExitLabel));
+            if (!ifStatement.IsSingleIf)
+            {
+                instructions.Add(_asmBuilder.Jmp(ifExitLabel));
+            }
 
             instructions.Add(_asmBuilder.Label(ifEndLabel));
 
@@ -227,14 +240,14 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
         {
             var elseInstructions = elseStatement.Else.Kind switch
             {
-                EmitKind.BlockStatement => VisitElseBody((EmitBlockStatement<EmitNode>)elseStatement.Else),
+                EmitKind.BlockStatement => VisitElseBody((EmitBlockStatement<EmitNode, CodeLocal>)elseStatement.Else),
                 EmitKind.IfStatement => VisitIfStatementFromElse((EmitIfStatement)elseStatement.Else),
                 _ => throw new UnreachableException(),
             };
 
             return elseInstructions;
 
-            List<Instruction> VisitElseBody(EmitBlockStatement<EmitNode> elseBody)
+            List<Instruction> VisitElseBody(EmitBlockStatement<EmitNode, CodeLocal> elseBody)
             {
                 List<Instruction> instructions = new();
 
@@ -266,14 +279,14 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
         public List<Instruction> VisitWhileStatement(EmitWhileStatement whileStatement)
         {
             var whileStartLabelOp = new Operand(whileStatement.JumpStart.Label.Name);
-            var whileEndLabelOp = new Operand(whileStatement.ConditionStatement.JumpIfFalse.Label.Name);
+            var whileEndLabelOp = new Operand(whileStatement.Condition.JumpIfFalse.Label.Name);
 
             var instructions = new List<Instruction>
             {
                 _asmBuilder.Label(whileStartLabelOp)
             };
 
-            instructions.AddRange(VisitConditionStatement(whileStatement.ConditionStatement));
+            instructions.AddRange(VisitCondition(whileStatement.Condition));
         
             foreach (var item in whileStatement.Body.Members)
             {
@@ -302,18 +315,11 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
                 EmitKind.IdentifierExpression => VisitIdentifierExpression((EmitIdentifierExpression)expression),
                 EmitKind.CallExpression => VisitValuableCallExpression((EmitCallExpression)expression),
                 EmitKind.AssignmentExpression => VisitAssignmentExpression((EmitAssignmentExpression)expression),
+                EmitKind.NewExpression => VisitNewExpression((EmitNewExpression)expression),
                 _ => throw new UnreachableException(),
             };
 
             return expressionInstructions;
-
-
-            List<Instruction> VisitValuableCallExpression(EmitCallExpression callExpression)
-            {
-                var instructions = VisitCallExpression(callExpression);
-                instructions.Add(_asmBuilder.Push(Operand.Rax));
-                return instructions;
-            }
         }
 
         public List<Instruction> VisitBinaryExpression(EmitBinaryExpression binaryExpression)
@@ -377,17 +383,29 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
             return instructions;
         }
 
-        public List<Instruction> VisitIdentifierExpression(EmitIdentifierExpression identifierExpression)
+        public List<Instruction> VisitReferenceIdentifierExpression(EmitIdentifierExpression identifierExpression)
         {
-            var variable = identifierExpression.GetVariable();
+            var variable = identifierExpression.GetLocal()!;
 
             var instructions = new List<Instruction>
             {
-                _asmBuilder.Mov(Operand.Rax, new Operand(GetRbpPos(variable.InScopeStackLocation))),
-                _asmBuilder.Push(Operand.Rax),
+                _asmBuilder.Push(new Operand(GetRbpPos(variable.InScopeStackLocation))),
             };
 
             return instructions;
+        }
+
+        public List<Instruction> VisitIdentifierExpression(EmitIdentifierExpression identifierExpression)
+        {
+            var local = identifierExpression.GetLocal()!;
+         
+            var localInstructions = new List<Instruction>
+            {
+                _asmBuilder.Mov(Operand.Rax, new Operand(GetRbpPos(local.InScopeStackLocation))),
+                _asmBuilder.Push(Operand.Rax),
+            };
+
+            return localInstructions;
         }
 
         public List<Instruction> VisitLogicalExpression(EmitLogicalExpression logicalExpression)
@@ -498,9 +516,41 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
             return instructions;
         }
 
+        public List<Instruction> VisitReferenceMemberExpression(EmitMemberExpression memberExpression)
+        {
+            var instructions = VisitIdentifierExpression((EmitIdentifierExpression)memberExpression.Left);
+
+            var memberedLeftType = ((MemberedTypeSymbol)memberExpression.Left.Type);
+
+            var pos = -8;
+            var right = memberedLeftType.Fields.FirstOrDefault(x => {
+                pos += 8;
+                return x.Name == memberExpression.Right.Text;
+            });
+
+            instructions.Add(_asmBuilder.Pop(Operand.Rax));
+            instructions.Add(_asmBuilder.Add(Operand.Rax, new Operand(pos)));
+            instructions.Add(_asmBuilder.Push(Operand.Rax));
+
+            return instructions;
+        }
+
         public List<Instruction> VisitMemberExpression(EmitMemberExpression memberExpression)
         {
-            throw new NotImplementedException();
+            var instructions = VisitIdentifierExpression((EmitIdentifierExpression)memberExpression.Left);
+
+            var memberedLeftType = ((MemberedTypeSymbol)memberExpression.Left.Type);
+
+            var pos = -8;
+            var right = memberedLeftType.Fields.FirstOrDefault(x => {
+                pos += 8;
+                return x.Name == memberExpression.Right.Text;
+            });
+
+            instructions.Add(_asmBuilder.Pop(Operand.Rax));
+            instructions.Add(_asmBuilder.Push(new Operand($"qword [rax + {pos}]")));
+
+            return instructions;
         }
 
         public List<Instruction> VisitUnaryExpression(EmitUnaryExpression unaryExpression)
@@ -511,6 +561,13 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
         public List<Instruction> VisitCastExpression(EmitCastExpression castExpression)
         {
             throw new NotImplementedException();
+        }
+
+        public List<Instruction> VisitValuableCallExpression(EmitCallExpression callExpression)
+        {
+            var instructions = VisitCallExpression(callExpression);
+            instructions.Add(_asmBuilder.Push(Operand.Rax));
+            return instructions;
         }
 
         public List<Instruction> VisitCallExpression(EmitCallExpression callExpression)
@@ -534,24 +591,73 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
         {
             var instructions = new List<Instruction>();
 
-            var location = GetSizedRbpPosStr(((EmitIdentifierExpression)assignmentExpression.Left).GetVariable().InScopeStackLocation);
+            Func<Operand> getLocation;
+
+            switch (assignmentExpression.Left.Kind)
+            {
+                case EmitKind.IdentifierExpression:
+                    var local = ((EmitIdentifierExpression)assignmentExpression.Left).GetLocal()!;
+                    var location = GetSizedRbpPosStr(local.InScopeStackLocation);
+
+                    getLocation = () => new Operand(location);
+                    break;
+         
+                case EmitKind.MemberExpression:
+                    instructions.AddRange(VisitReferenceMemberExpression((EmitMemberExpression)assignmentExpression.Left));
+
+                    getLocation = () => {
+                        instructions.Add(_asmBuilder.Pop(Operand.Rax));
+                        return new Operand($"[{Operand.Rax.Value}]");
+                    };
+                    break;
+ 
+                default:
+                    throw new UnreachableException();
+            }
 
             instructions.AddRange(VisitExpression(assignmentExpression.Right));
-            instructions.Add(_asmBuilder.Pop(Operand.Rax));
+            instructions.Add(_asmBuilder.Pop(Operand.Rbx));
 
-            var locationOperand = new Operand(location);
-            instructions.Add(_asmBuilder.Mov(locationOperand, Operand.Rax));
+            instructions.Add(_asmBuilder.Mov(getLocation(), Operand.Rbx));
 
             return instructions;
         }
+
+        public List<Instruction> VisitNewExpression(EmitNewExpression newExpression)
+        {
+            var instructions = new List<Instruction>();
+
+            foreach (var item in newExpression.Initializer.Members)
+            {
+                instructions.AddRange(VisitDefaultBlock(item));
+            }
+
+            instructions.Add(_asmBuilder.Push(Operand.Rax));
+
+            return instructions;
+        }
+
         #endregion Expressions
+
+        public List<Instruction> VisitCondition(EmitCondition condition)
+        {
+            var instructions = VisitExpression(condition.Condition);
+
+            instructions.Add(_asmBuilder.Pop(Operand.Rax));
+            instructions.Add(_asmBuilder.Test(Operand.Rax, Operand.Rax));
+
+            var jumpFalseLabel = new Operand(condition.JumpIfFalse.Label.Name);
+            instructions.Add(_asmBuilder.Je(jumpFalseLabel));
+
+            return instructions;
+        }
 
         private List<Instruction> VisitDefaultBlock(EmitNode item)
         {
             switch (item.Kind)
             {
-                case EmitKind.VariableDeclaration:
-                    return VisitVariableDeclaration((EmitVariableDeclaration)item);
+                case EmitKind.LocalDeclaration:
+                    return VisitLocalDeclaration((EmitLocalDeclaration)item);
 
                 case EmitKind.CallExpression:
                     return VisitCallExpression((EmitCallExpression)item);

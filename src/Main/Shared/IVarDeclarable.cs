@@ -2,8 +2,8 @@
 
 namespace JiteLang.Main.Shared
 {
-    internal interface IVarDeclarable<T>
+    internal interface IVarDeclarable<TVar>
     {
-        Dictionary<string, T> Variables { get; set; }
+        Dictionary<string, TVar> Variables { get; set; }
     }
 }

@@ -96,7 +96,7 @@ namespace JiteLang.Main.Bound.TypeResolvers
                 return resultType;
             }
 
-            return TypeSymbol.None;
+            return ErrorTypeSymbol.Instance;
         }
     }
 }

@@ -7,14 +7,16 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
     {
         public override SyntaxKind Kind => SyntaxKind.WhileStatement;
 
-        public WhileStatementSyntax(ExpressionSyntax condition, BlockStatement<SyntaxNode> body)
+        public WhileStatementSyntax(SyntaxNode parent, ExpressionSyntax condition, BlockStatement<SyntaxNode> body) : base(parent)
         {
             Condition = condition;
             Body = body;
         }
 
-        public WhileStatementSyntax(ExpressionSyntax condition) : this(condition, new())
+        public WhileStatementSyntax(SyntaxNode parent, ExpressionSyntax condition) : base(parent)
         {
+            Condition = condition;
+            Body = new(this);
         }
 
         public ExpressionSyntax Condition { get; set; }

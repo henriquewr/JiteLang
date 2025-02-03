@@ -1,32 +1,28 @@
-﻿using JiteLang.Main.AsmBuilder.Scope;
-using JiteLang.Main.Emit.Tree.Statements.Declarations;
+﻿using JiteLang.Main.Emit.AsmBuilder.Scope;
 using JiteLang.Main.Shared;
-using System;
-using System.Collections.Generic;
+using JiteLang.Main.Shared.Type;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JiteLang.Main.Emit.Tree.Expressions
 {
     internal class EmitIdentifierExpression : EmitExpression
     {
         public override EmitKind Kind => EmitKind.IdentifierExpression;
+        public override TypeSymbol Type => GetLocal().Type;
         public EmitIdentifierExpression(EmitNode parent, string text) : base(parent)
         {
             Text = text;
         }
         public string Text { get; set; }
 
-        public CodeVariable GetVariable()
+        public CodeLocal GetLocal()
         {
-            return GetVariable(Parent, Text);
+            return GetLocal(Parent, Text);
         }
 
-        private static CodeVariable GetVariable(EmitNode node, string name)
+        private static CodeLocal GetLocal(EmitNode node, string name)
         {
-            var current = GetNearestVarDeclarable(node, out var currentDeclarableNode);
+            var current = GetNearestLocalDeclarable(node, out var currentDeclarableNode);
 
             while (current != null)
             {
@@ -35,19 +31,19 @@ namespace JiteLang.Main.Emit.Tree.Expressions
                     return value;
                 }
 
-                current = GetNearestVarDeclarable(currentDeclarableNode.Parent, out currentDeclarableNode);
+                current = GetNearestLocalDeclarable(currentDeclarableNode.Parent, out currentDeclarableNode);
             }
 
             throw new UnreachableException();
         }
 
-        private static IVarDeclarable<CodeVariable> GetNearestVarDeclarable(EmitNode node, out EmitNode declarableNode)
+        private static IVarDeclarable<CodeLocal>? GetNearestLocalDeclarable(EmitNode node, out EmitNode declarableNode)
         {
             declarableNode = node;
 
             while (declarableNode != null)
             {
-                if (declarableNode is IVarDeclarable<CodeVariable> declarable)
+                if (declarableNode is IVarDeclarable<CodeLocal> declarable)
                 {
                     return declarable;
                 }
@@ -55,8 +51,7 @@ namespace JiteLang.Main.Emit.Tree.Expressions
                 declarableNode = declarableNode.Parent;
             }
 
-            throw new UnreachableException();
+            return null;
         }
-
     }
 }

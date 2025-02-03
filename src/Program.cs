@@ -23,20 +23,31 @@ namespace JiteLang
             var text = """
 namespace Teste
 {
+    class Classe
+    {
+
+        public int Metodo()
+        {
+           return 145;
+        }
+
+    }
+
     class AlgumaCoisa
     {
         public int Main()
         {
-            AlgumaCoisa a = null;
-            Print(a);
-            return 1;
+            Classe alguma = new Classe();
+
+            return alguma.Metodo();
         }
 
-        public extern void Print(string value);
+        //public extern void Print(string value);
     }
+
+
 }
 """;
-
             Compile(text);
         }
 
@@ -46,13 +57,17 @@ namespace Teste
 
             var parsed = new Parser(lexed).Parse();
 
-            var boundTree = new Binder(parsed).Bind(TypeScope.CreateGlobal());
-
             var settings = new JsonSerializerSettings
             {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                Formatting = Formatting.Indented,
             };
-            var jsonTeste = Newtonsoft.Json.JsonConvert.SerializeObject(boundTree.Root, settings);
+
+            var jsonParsed = JsonConvert.SerializeObject(parsed.Root, settings);
+
+            var boundTree = new Binder(parsed).Bind(TypeScope.CreateGlobal());
+
+            var jsonTeste = JsonConvert.SerializeObject(boundTree.Root, settings);
 
             foreach (var error in boundTree.Errors)
             {
@@ -74,6 +89,7 @@ namespace Teste
             var intructions = asmBuilderVisitor.VisitNamespaceDeclaration(emitTree);
 
             var optimized = Optimize(intructions); //make it better
+            //var optimized = intructions;
 
             using StringWriter streamWriter = new();
             var asmEmiter = new AssemblyEmiter(streamWriter); 

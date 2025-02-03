@@ -10,17 +10,22 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using JiteLang.Main.Shared;
+using System.Collections.Generic;
+using JiteLang.Main.Emit.AsmBuilder.Scope;
+using JiteLang.Main.PredefinedMethods;
 
 namespace JiteLang.Main.Emit.Tree
 {
     internal class EmitTreeBuilderVisitor
     {
+        private readonly Dictionary<string, EmitClassDeclaration> _typesDeclaration = new();
+
         private EmitMethodDeclaration? _currentMethod = null;
 
         #region Declarations
         public EmitNamespaceDeclaration VisitNamespaceDeclaration(BoundNamespaceDeclaration root, EmitNode? parent)
         {
-            EmitNamespaceDeclaration emitNamespace = new(parent!);
+            EmitNamespaceDeclaration emitNamespace = new(parent!, root.Identifier.Text);
 
             foreach (var classDeclaration in root.Body.Members)
             {
@@ -32,21 +37,22 @@ namespace JiteLang.Main.Emit.Tree
 
         public EmitClassDeclaration VisitClassDeclaration(BoundClassDeclaration classDeclaration, EmitNode parent)
         {
-            EmitClassDeclaration emitClass = new(parent, classDeclaration.Identifier.Text);
+            EmitClassDeclaration emitClass = new(parent, classDeclaration.Type, classDeclaration.Identifier.Text);
+
+            _typesDeclaration[emitClass.GetFullName()] = emitClass;
 
             foreach (var item in classDeclaration.Body.Members)
             {
                 switch (item.Kind)
                 {
-                    case BoundKind.VariableDeclaration:
-                        throw new NotImplementedException();
-                        emitClass.Body.Members.Add(VisitVariableDeclaration((BoundVariableDeclaration)item, emitClass));
+                    case BoundKind.FieldDeclaration:
+                        emitClass.Body.Members.Add(VisitFieldDeclaration((BoundFieldDeclaration)item, emitClass.Body));
                         break;
                     case BoundKind.MethodDeclaration:
-                        emitClass.Body.Members.Add(VisitMethodDeclaration((BoundMethodDeclaration)item, emitClass));
+                        emitClass.Body.Members.Add(VisitMethodDeclaration((BoundMethodDeclaration)item, emitClass.Body));
                         break;
                     case BoundKind.ClassDeclaration:
-                        emitClass.Body.Members.Add(VisitClassDeclaration((BoundClassDeclaration)item, emitClass));
+                        emitClass.Body.Members.Add(VisitClassDeclaration((BoundClassDeclaration)item, emitClass.Body));
                         break;
                     default:
                         throw new UnreachableException();
@@ -94,7 +100,10 @@ namespace JiteLang.Main.Emit.Tree
                 //return VisitExternMethodDeclaration(methodDeclaration, newScope);
             }
 
-            EmitMethodDeclaration emitMethodDeclaration = new(parent, methodDeclaration.Identifier.Text);
+            EmitMethodDeclaration emitMethodDeclaration = new(parent, methodDeclaration.Identifier.Text)
+            {
+                IsInitializer = methodDeclaration.IsInitializer
+            };
 
             _currentMethod = emitMethodDeclaration;
 
@@ -119,34 +128,47 @@ namespace JiteLang.Main.Emit.Tree
                 throw new NullReferenceException();
             }
             _currentMethod.UpperStackPosition += 8;
-            _currentMethod.Body.Variables.Add(parameterDeclaration.Identifier.Text, new(_currentMethod.UpperStackPosition, parameterDeclaration.Type));
+            _currentMethod.Body.Variables.Add(parameterDeclaration.Identifier.Text, new CodeLocal(_currentMethod.UpperStackPosition, parameterDeclaration.Type));
 
             EmitParameterDeclaration parameter = new(parent, parameterDeclaration.Identifier.Text);
 
             return parameter;
         }
 
-        public EmitVariableDeclaration VisitVariableDeclaration(BoundVariableDeclaration variableDeclaration, EmitNode parent)
+        public EmitLocalDeclaration VisitLocalDeclaration(BoundLocalDeclaration localDeclaration, EmitNode parent)
         {
             if (_currentMethod is null)
             {
                 throw new NullReferenceException();
             }
 
-            var declarable = GetNearestVarDeclarable(parent);
+            var declarable = GetNearestLocalDeclarable(parent);
 
             _currentMethod.StackAllocatedBytes -= 8;
 
-            EmitVariableDeclaration emitVariableDeclaration = new(parent, variableDeclaration.Identifier.Text);
+            EmitLocalDeclaration emitVariableDeclaration = new(parent, localDeclaration.Identifier.Text);
 
-            if (variableDeclaration.InitialValue is not null)
+            if (localDeclaration.InitialValue is not null)
             {
-                emitVariableDeclaration.InitialValue = VisitExpression(variableDeclaration.InitialValue, emitVariableDeclaration);
+                emitVariableDeclaration.InitialValue = VisitExpression(localDeclaration.InitialValue, emitVariableDeclaration);
             }
 
-            declarable.Variables.Add(variableDeclaration.Identifier.Text, new(_currentMethod.StackAllocatedBytes, variableDeclaration.Type));
+            declarable.Variables.Add(localDeclaration.Identifier.Text, new CodeLocal(_currentMethod.StackAllocatedBytes, localDeclaration.Type));
 
             return emitVariableDeclaration;
+        }
+
+        public EmitFieldDeclaration VisitFieldDeclaration(BoundFieldDeclaration fieldDeclaration, EmitNode parent)
+        {
+            EmitFieldDeclaration emitFieldDeclaration = new(parent, fieldDeclaration.Identifier.Text);
+
+            var declarable = GetNearestFieldDeclarable(parent);
+
+            var location = declarable.Variables.Count * 8;
+
+            declarable.Variables.Add(emitFieldDeclaration.Name, new CodeField(fieldDeclaration.Type, location));
+
+            return emitFieldDeclaration;
         }
         #endregion Declarations
 
@@ -198,9 +220,9 @@ namespace JiteLang.Main.Emit.Tree
             
             return emitElse;
 
-            EmitBlockStatement<EmitNode> VisitElseBody(BoundBlockStatement<BoundNode> elseBody, EmitNode parent)
+            EmitBlockStatement<EmitNode, CodeVariable> VisitElseBody(BoundBlockStatement<BoundNode> elseBody, EmitNode parent)
             {
-                EmitBlockStatement<EmitNode> emitBlock = new(parent);
+                EmitBlockStatement<EmitNode, CodeVariable> emitBlock = new(parent);
 
                 foreach (var item in elseBody.Members)
                 {
@@ -240,6 +262,7 @@ namespace JiteLang.Main.Emit.Tree
                 BoundKind.IdentifierExpression => VisitIdentifierExpression((BoundIdentifierExpression)expression, parent),
                 BoundKind.CallExpression => VisitCallExpression((BoundCallExpression)expression, parent),
                 BoundKind.AssignmentExpression => VisitAssignmentExpression((BoundAssignmentExpression)expression, parent),
+                BoundKind.NewExpression => VisitNewExpression((BoundNewExpression)expression, parent),
                 _ => throw new UnreachableException(),
             };
 
@@ -288,7 +311,11 @@ namespace JiteLang.Main.Emit.Tree
 
         public EmitMemberExpression VisitMemberExpression(BoundMemberExpression memberExpression, EmitNode parent)
         {
-            throw new NotImplementedException();
+            EmitMemberExpression emitMemberExpr = new(parent, null!, null!);
+            emitMemberExpr.Left = VisitExpression(memberExpression.Left, emitMemberExpr);
+            emitMemberExpr.Right = VisitIdentifierExpression(memberExpression.Right, emitMemberExpr);
+
+            return emitMemberExpr;
         }
 
         public EmitUnaryExpression VisitUnaryExpression(BoundUnaryExpression unaryExpression, EmitNode parent)
@@ -306,7 +333,6 @@ namespace JiteLang.Main.Emit.Tree
             var caller = VisitExpression(callExpression.Caller, parent);
             var args = callExpression.Args.Select(x => VisitExpression(x, parent)).ToList();
             EmitCallExpression emitCallExpression = new(parent, caller, args);
-
             return emitCallExpression;
         }
 
@@ -328,14 +354,28 @@ namespace JiteLang.Main.Emit.Tree
 
             return emitAssingnment;
         }
+
+        public EmitNewExpression VisitNewExpression(BoundNewExpression newExpression, EmitNode parent)
+        {
+            var typeDeclaration = _typesDeclaration[newExpression.Type.FullText];
+
+            EmitNewExpression newExpr = new(parent, newExpression.Type);
+
+            var callInitIdentifier = new EmitIdentifierExpression(newExpr.Initializer, typeDeclaration.Initializer.Label.Name);
+            EmitLiteralExpression typeSize = new(null!, new ConstantValue(default, newExpression.Type.Size * 10));
+            newExpr.Initializer.Members.Add(new EmitCallExpression(newExpr.Initializer, callInitIdentifier, new() { Method_AllocateReadWriteMemory.Call(newExpr.Initializer, typeSize) }));
+
+            return newExpr;
+        }
+
         #endregion Expressions
 
         private EmitNode VisitDefaultBlock(BoundNode item, EmitNode parent)
         {
             switch (item.Kind)
             {
-                case BoundKind.VariableDeclaration:
-                    return VisitVariableDeclaration((BoundVariableDeclaration)item, parent);
+                case BoundKind.LocalDeclaration:
+                    return VisitLocalDeclaration((BoundLocalDeclaration)item, parent);
 
                 case BoundKind.CallExpression:
                     return VisitCallExpression((BoundCallExpression)item, parent);
@@ -357,9 +397,9 @@ namespace JiteLang.Main.Emit.Tree
             }
         }
 
-        private static CodeVariable GetVariable(EmitNode node, string name)
+        private static CodeLocal GetLocal(EmitNode node, string name)
         {
-            var current = GetNearestVarDeclarable(node, out var currentDeclarableNode);
+            var current = GetNearestLocalDeclarable(node, out var currentDeclarableNode);
            
             while (current != null)
             {
@@ -368,24 +408,46 @@ namespace JiteLang.Main.Emit.Tree
                     return value;
                 }
 
-                current = GetNearestVarDeclarable(currentDeclarableNode.Parent, out currentDeclarableNode);
+                current = GetNearestLocalDeclarable(currentDeclarableNode.Parent, out currentDeclarableNode);
             }
 
             throw new UnreachableException();
         }
 
-        private static IVarDeclarable<CodeVariable> GetNearestVarDeclarable(EmitNode node)
+        private static IVarDeclarable<CodeLocal> GetNearestLocalDeclarable(EmitNode node)
         {
-            return GetNearestVarDeclarable(node, out _);
+            return GetNearestLocalDeclarable(node, out _);
         }
 
-        private static IVarDeclarable<CodeVariable> GetNearestVarDeclarable(EmitNode node, out EmitNode declarableNode)
+        private static IVarDeclarable<CodeLocal> GetNearestLocalDeclarable(EmitNode node, out EmitNode declarableNode)
         {
             declarableNode = node;
 
             while (declarableNode != null)
             {
-                if (declarableNode is IVarDeclarable<CodeVariable> declarable)
+                if (declarableNode is IVarDeclarable<CodeLocal> declarable)
+                {
+                    return declarable;
+                }
+
+                declarableNode = declarableNode.Parent;
+            }
+
+            throw new UnreachableException();
+        }
+
+        private static IVarDeclarable<CodeField> GetNearestFieldDeclarable(EmitNode node)
+        {
+            return GetNearestFieldDeclarable(node, out _);
+        }
+
+        private static IVarDeclarable<CodeField> GetNearestFieldDeclarable(EmitNode node, out EmitNode declarableNode)
+        {
+            declarableNode = node;
+
+            while (declarableNode != null)
+            {
+                if (declarableNode is IVarDeclarable<CodeField> declarable)
                 {
                     return declarable;
                 }

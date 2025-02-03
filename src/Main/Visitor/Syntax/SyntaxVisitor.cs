@@ -22,9 +22,7 @@ namespace JiteLang.Main.Visitor.Syntax
         LiteralExpressionSyntax,
         ParameterDeclarationSyntax,
         TScope>
-        where TScope : IScope<TVariableKey, TVariable, TMethodKey, TMethod, TScope>, new()
-        where TVariableKey : notnull
-        where TMethodKey : notnull
+        where TScope : IScope<TVariable, TMethod, TScope>, new()
     {
         public SyntaxVisitor()
         {
