@@ -352,7 +352,7 @@ namespace JiteLang.Main.LangParser
 
             return ifStmt;
 
-            StatementSyntax? TryParseElseStatement(SyntaxNode parent)
+            ElseStatementSyntax? TryParseElseStatement(SyntaxNode parent)
             {
                 if (_tokens.Current.Kind == SyntaxKind.ElseKeyword)
                 {
@@ -365,16 +365,20 @@ namespace JiteLang.Main.LangParser
             }
         }
 
-        private StatementSyntax ParseElseStatement(SyntaxNode parent)
+        private ElseStatementSyntax ParseElseStatement(SyntaxNode parent)
         {
+            var elseStmt = new ElseStatementSyntax(parent, null!);
+
             if (_tokens.Current.Kind == SyntaxKind.IfKeyword)
             {
-                return ParseIfStatement(parent);
+                elseStmt.Else = ParseIfStatement(parent);
+            }
+            else
+            {
+                elseStmt.Else = ParseBlockStatement<SyntaxNode>(parent, ParseDefaultMembers);
             }
 
-            var elseBody = ParseBlockStatement<SyntaxNode>(parent, ParseDefaultMembers);
-
-            return elseBody;
+            return elseStmt;
         }
 
         private WhileStatementSyntax ParseWhileStatement(SyntaxNode parent)
@@ -664,15 +668,6 @@ namespace JiteLang.Main.LangParser
 
                 return args;
             }
-        }
-
-        private ExpressionSyntax ParseIdentifierMemberExpression(SyntaxNode parent)
-        {
-            Expect(SyntaxKind.IdentifierToken, out var currentToken, "Expected identifier");
-
-            var identifier = SyntaxFactory.Identifier(parent, currentToken);
-
-            return ParseMemberExpression(parent, identifier);
         }
 
         private ExpressionSyntax ParseMemberExpression(SyntaxNode parent, ExpressionSyntax leftExpr)

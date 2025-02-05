@@ -1,16 +1,15 @@
-﻿using JiteLang.Syntax;
+﻿using JiteLang.Main.Shared;
+using JiteLang.Syntax;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes
 {
-    internal abstract class SyntaxNode
+    internal abstract class SyntaxNode : Parented<SyntaxNode>
     {
-        public SyntaxNode(SyntaxNode parent)
+        public SyntaxNode(SyntaxNode parent) : base(parent)
         {
-            Parent = parent;
         }
 
         public abstract SyntaxKind Kind { get; }
         public SyntaxPosition Position { get; set; }
-        public SyntaxNode Parent { get; set; }
     }
 }

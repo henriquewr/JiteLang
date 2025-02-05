@@ -1,4 +1,6 @@
 ﻿
+using JiteLang.Main.Shared.Modifiers;
+
 namespace JiteLang.Syntax
 {
     internal static class SyntaxFacts
@@ -6,6 +8,7 @@ namespace JiteLang.Syntax
         public const string Public = "public";
         public const string Private = "private";
         public const string Extern = "extern";
+        public const string Static = "static";
 
         public const string Int = "int";
         public const string String = "string";
@@ -52,25 +55,38 @@ namespace JiteLang.Syntax
 
         public static bool IsAccessModifier(SyntaxKind kind)
         {
+            return GetAccessModifier(kind) != AccessModifier.None;
+        }
+
+        public static AccessModifier GetAccessModifier(SyntaxKind kind)
+        {
             switch (kind)
             {
                 case SyntaxKind.PublicKeyword:
+                    return AccessModifier.Public;
                 case SyntaxKind.PrivateKeyword:
-                    return true;
+                    return AccessModifier.Private;
                 default:
-                    return false;
+                    return AccessModifier.None;
             }
-        } 
+        }
 
-        public static bool IsModifier(SyntaxKind kind) //the name IsModifier is very generic...
+        public static Modifier GetModifier(SyntaxKind kind)
         {
             switch (kind)
             {
                 case SyntaxKind.ExternKeyword:
-                    return true;
+                    return Modifier.Extern;           
+                case SyntaxKind.StaticKeyword:
+                    return Modifier.Static;
                 default:
-                    return false;
+                    return Modifier.None;
             }
+        }
+
+        public static bool IsModifier(SyntaxKind kind) //the name IsModifier is very generic...
+        {
+            return GetModifier(kind) != Modifier.None;
         }
 
         public static bool IsNumeric(SyntaxKind keyword)
@@ -162,6 +178,9 @@ namespace JiteLang.Syntax
                 case Extern:
                     return SyntaxKind.ExternKeyword;
 
+                case Static:
+                    return SyntaxKind.StaticKeyword;
+
                 case Return:
                     return SyntaxKind.ReturnKeyword;
 
@@ -241,6 +260,9 @@ namespace JiteLang.Syntax
 
                 case SyntaxKind.ExternKeyword:
                     return Extern;
+
+                case SyntaxKind.StaticKeyword:
+                    return Static;
 
                 case SyntaxKind.ReturnKeyword:
                     return Return;

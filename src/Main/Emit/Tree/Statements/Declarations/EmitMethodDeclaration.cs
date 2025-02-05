@@ -1,6 +1,7 @@
 ﻿using JiteLang.Main.AsmBuilder.Scope;
 using JiteLang.Main.Emit.AsmBuilder.Scope;
 using JiteLang.Main.Emit.Tree.Expressions;
+using JiteLang.Main.Shared.Modifiers;
 using System.Collections.Generic;
 
 namespace JiteLang.Main.Emit.Tree.Statements.Declarations
@@ -41,6 +42,8 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
         public int UpperStackPosition { get; set; } = UpperStackInitialPos;
         public EmitBlockStatement<EmitNode, CodeLocal> Body { get; set; }
         public List<EmitParameterDeclaration> Params { get; set; }
+        public Modifier Modifiers { get; set; }
+        public AccessModifier AccessModifiers { get; set; }
         public bool IsInitializer { get; set; }
     }
 }

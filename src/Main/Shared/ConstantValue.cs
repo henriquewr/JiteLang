@@ -18,39 +18,39 @@ namespace JiteLang.Main.Shared
     [DebuggerDisplay("{Text}")]
     internal class ConstantValue
     {
-        private ConstantValue(ConstantValueKind kind, SyntaxPosition position, string text, bool dummy) // the string constructor is equals to this, it needs a dummy
+        private ConstantValue(ConstantValueKind kind, SyntaxPosition position, string text)
         {
             Kind = kind;
             Position = position;
             Text = text;
         }
 
-        public ConstantValue(SyntaxPosition position, int value) : this(ConstantValueKind.Int, position, value.ToString(), false)
+        public ConstantValue(SyntaxPosition position, int value) : this(ConstantValueKind.Int, position, value.ToString())
         {
             IntValue = value;
         }
 
-        public ConstantValue(SyntaxPosition position, string value) : this(ConstantValueKind.String, position, value, false)
+        public ConstantValue(SyntaxPosition position, string value) : this(ConstantValueKind.String, position, value)
         {
             StringValue = value;
         }
 
-        public ConstantValue(SyntaxPosition position, bool value) : this(ConstantValueKind.Bool, position, value.ToString(), false)
+        public ConstantValue(SyntaxPosition position, bool value) : this(ConstantValueKind.Bool, position, value.ToString())
         {
             BoolValue = value;
         }   
 
-        public ConstantValue(SyntaxPosition position, long value) : this(ConstantValueKind.Long, position, value.ToString(), false)
+        public ConstantValue(SyntaxPosition position, long value) : this(ConstantValueKind.Long, position, value.ToString())
         {
             LongValue = value;
         }
 
-        public ConstantValue(SyntaxPosition position, char value) : this(ConstantValueKind.Char, position, value.ToString(), false)
+        public ConstantValue(SyntaxPosition position, char value) : this(ConstantValueKind.Char, position, value.ToString())
         {
             CharValue = value;
         }
 
-        public ConstantValue(SyntaxPosition position) : this(ConstantValueKind.Null, position, SyntaxFacts.Null, false)
+        public ConstantValue(SyntaxPosition position) : this(ConstantValueKind.Null, position, SyntaxFacts.Null)
         {
         }
 

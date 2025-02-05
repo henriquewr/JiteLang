@@ -158,6 +158,8 @@ namespace JiteLang.Syntax
         NewKeyword = 3019,        
         /// <summary><c> object </c></summary>
         ObjectKeyword = 3020,
+        /// <summary><c> static </c></summary>
+        StaticKeyword = 3021,
 
 
         //Declarations: 4000 -> 5000
@@ -203,7 +205,9 @@ namespace JiteLang.Syntax
         ReturnStatement = 6002,
         /// <summary><c> if </c></summary>
         IfStatement = 6003,
+        /// <summary><c> else / else if </c></summary>
+        ElseStatement = 6004,
         /// <summary><c> while </c></summary>
-        WhileStatement = 6004,
+        WhileStatement = 6005,
     }
 }

@@ -1,15 +1,14 @@
-﻿using JiteLang.Syntax;
+﻿using JiteLang.Main.Shared;
+using JiteLang.Syntax;
 
 namespace JiteLang.Main.Bound
 {
-    internal abstract class BoundNode
+    internal abstract class BoundNode : Parented<BoundNode>
     {
-        public BoundNode(BoundNode parent)
+        public BoundNode(BoundNode parent) : base(parent)
         {
-            Parent = parent;
         }
 
-        public BoundNode? Parent { get; set; }
         public abstract BoundKind Kind { get; }
         public SyntaxPosition Position { get; set; }
     }

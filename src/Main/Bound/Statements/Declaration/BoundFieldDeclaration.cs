@@ -1,7 +1,6 @@
 ﻿using JiteLang.Main.Bound.Expressions;
-using JiteLang.Main.LangParser.SyntaxNodes;
+using JiteLang.Main.Shared.Modifiers;
 using JiteLang.Main.Shared.Type;
-using System.Collections.Generic;
 
 namespace JiteLang.Main.Bound.Statements.Declaration
 {
@@ -9,15 +8,11 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.FieldDeclaration;
 
-        public BoundFieldDeclaration(BoundNode parent, BoundIdentifierExpression identifierExpression, TypeSymbol type) : this(parent, identifierExpression, type, new())
+        public BoundFieldDeclaration(BoundNode parent, BoundIdentifierExpression identifierExpression, TypeSymbol type) : base(parent, identifierExpression, type)
         {
         }
 
-        public BoundFieldDeclaration(BoundNode parent, BoundIdentifierExpression identifierExpression, TypeSymbol type, List<SyntaxToken> modifiers) : base(parent, identifierExpression, type)
-        {
-            Modifiers = modifiers;
-        }
-
-        public List<SyntaxToken> Modifiers { get; set; }
+        public Modifier Modifiers { get; set; }
+        public AccessModifier AccessModifiers { get; set; }
     }
 }

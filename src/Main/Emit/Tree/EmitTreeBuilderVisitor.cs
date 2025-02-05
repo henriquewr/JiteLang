@@ -13,6 +13,10 @@ using JiteLang.Main.Shared;
 using System.Collections.Generic;
 using JiteLang.Main.Emit.AsmBuilder.Scope;
 using JiteLang.Main.PredefinedMethods;
+using JiteLang.Main.Shared.Modifiers;
+using System.Reflection.Metadata;
+using JiteLang.Main.Shared.Type;
+using System.Data.Common;
 
 namespace JiteLang.Main.Emit.Tree
 {
@@ -95,7 +99,7 @@ namespace JiteLang.Main.Emit.Tree
 
         public EmitMethodDeclaration VisitMethodDeclaration(BoundMethodDeclaration methodDeclaration, EmitNode parent)
         {
-            if (methodDeclaration.Modifiers.Any(x => x.Kind == Syntax.SyntaxKind.ExternKeyword))
+            if (methodDeclaration.Modifiers.HasFlag(Modifier.Extern))
             {
                 //return VisitExternMethodDeclaration(methodDeclaration, newScope);
             }
@@ -105,7 +109,19 @@ namespace JiteLang.Main.Emit.Tree
                 IsInitializer = methodDeclaration.IsInitializer
             };
 
+            (emitMethodDeclaration.Modifiers, emitMethodDeclaration.AccessModifiers) = (methodDeclaration.Modifiers, methodDeclaration.AccessModifiers);
+
             _currentMethod = emitMethodDeclaration;
+
+            if (!methodDeclaration.Modifiers.HasFlag(Modifier.Static))
+            {
+                EmitParameterDeclaration emitParam = new(emitMethodDeclaration, "this");
+                var classDeclaration = emitMethodDeclaration.GetFirstOrDefaultOfType<EmitClassDeclaration>()!;
+
+                AddParameter(emitMethodDeclaration!, emitParam.Name, classDeclaration.Type);
+
+                emitMethodDeclaration.Params.Add(emitParam);
+            }
 
             foreach (var item in methodDeclaration.Params)
             {
@@ -123,16 +139,20 @@ namespace JiteLang.Main.Emit.Tree
 
         public EmitParameterDeclaration VisitMethodParameter(BoundParameterDeclaration parameterDeclaration, EmitNode parent)
         {
-            if (_currentMethod is null)
-            {
-                throw new NullReferenceException();
-            }
-            _currentMethod.UpperStackPosition += 8;
-            _currentMethod.Body.Variables.Add(parameterDeclaration.Identifier.Text, new CodeLocal(_currentMethod.UpperStackPosition, parameterDeclaration.Type));
+            AddParameter(_currentMethod!, parameterDeclaration.Identifier.Text, parameterDeclaration.Type);
 
             EmitParameterDeclaration parameter = new(parent, parameterDeclaration.Identifier.Text);
 
             return parameter;
+        }
+
+        private static CodeLocal AddParameter(EmitMethodDeclaration method, string text, TypeSymbol type)
+        {
+            method.UpperStackPosition += 8;
+            CodeLocal local = new(method.UpperStackPosition, type);
+            method.Body.Variables.Add(text, local);
+
+            return local;
         }
 
         public EmitLocalDeclaration VisitLocalDeclaration(BoundLocalDeclaration localDeclaration, EmitNode parent)
@@ -161,6 +181,8 @@ namespace JiteLang.Main.Emit.Tree
         public EmitFieldDeclaration VisitFieldDeclaration(BoundFieldDeclaration fieldDeclaration, EmitNode parent)
         {
             EmitFieldDeclaration emitFieldDeclaration = new(parent, fieldDeclaration.Identifier.Text);
+
+            (emitFieldDeclaration.Modifiers, emitFieldDeclaration.AccessModifiers) = (fieldDeclaration.Modifiers, fieldDeclaration.AccessModifiers);
 
             var declarable = GetNearestFieldDeclarable(parent);
 
@@ -220,9 +242,9 @@ namespace JiteLang.Main.Emit.Tree
             
             return emitElse;
 
-            EmitBlockStatement<EmitNode, CodeVariable> VisitElseBody(BoundBlockStatement<BoundNode> elseBody, EmitNode parent)
+            EmitBlockStatement<EmitNode, CodeLocal> VisitElseBody(BoundBlockStatement<BoundNode> elseBody, EmitNode parent)
             {
-                EmitBlockStatement<EmitNode, CodeVariable> emitBlock = new(parent);
+                EmitBlockStatement<EmitNode, CodeLocal> emitBlock = new(parent);
 
                 foreach (var item in elseBody.Members)
                 {

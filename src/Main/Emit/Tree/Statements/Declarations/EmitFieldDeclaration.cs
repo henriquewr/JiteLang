@@ -1,6 +1,4 @@
-﻿using JiteLang.Main.LangParser.SyntaxNodes;
-using System.Collections.Generic;
-using System.Xml.Linq;
+﻿using JiteLang.Main.Shared.Modifiers;
 
 namespace JiteLang.Main.Emit.Tree.Statements.Declarations
 {
@@ -8,15 +6,11 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
     {
         public override EmitKind Kind => EmitKind.FieldDeclaration;
 
-        public EmitFieldDeclaration(EmitNode parent, string name) : this(parent, name, new())
+        public EmitFieldDeclaration(EmitNode parent, string name) : base(parent, name)
         {
         }
 
-        public EmitFieldDeclaration(EmitNode parent, string name, List<SyntaxToken> modifiers) : base(parent, name)
-        {
-            Modifiers = modifiers;
-        }
-
-        public List<SyntaxToken> Modifiers { get; set; }
+        public Modifier Modifiers { get; set; }
+        public AccessModifier AccessModifiers { get; set; }
     }
 }

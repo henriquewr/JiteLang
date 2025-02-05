@@ -1,4 +1,5 @@
 ﻿using JiteLang.Main.Bound.Expressions;
+using JiteLang.Main.Shared.Modifiers;
 using JiteLang.Main.Shared.Type;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,9 +29,10 @@ namespace JiteLang.Main.Bound.Statements.Declaration
         }
         protected void AddInitializer()
         {
-            BoundMethodDeclaration initializer = new(Body, new BoundIdentifierExpression(null!, "init", default), Type, new(), new());
+            BoundMethodDeclaration initializer = new(Body, new BoundIdentifierExpression(null!, $"init_{GetFullName('_')}", default), Type, new());
             initializer.Identifier.Parent = initializer;
             initializer.IsInitializer = true;
+            initializer.Modifiers = Modifier.Static;
 
             BoundParameterDeclaration builtParameter = new(
                 initializer.Body,
@@ -51,13 +53,7 @@ namespace JiteLang.Main.Bound.Statements.Declaration
 
         public TypeSymbol Type { get; set; }
 
-        public BoundMethodDeclaration Initializer 
-        { 
-            get
-            {
-                return Body.Members.OfType<BoundMethodDeclaration>().First(x => x.IsInitializer);
-            }
-        }
+        public BoundMethodDeclaration Initializer => Body.Members.OfType<BoundMethodDeclaration>().First(x => x.IsInitializer);
 
         public List<BoundMethodDeclaration> Constructors { get; set; }
 

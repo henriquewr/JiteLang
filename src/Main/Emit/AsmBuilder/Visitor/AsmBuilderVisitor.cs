@@ -582,7 +582,20 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
                 instructions.AddRange(visited);
             }
 
-            instructions.Add(_asmBuilder.Call(new Operand(((EmitIdentifierExpression)callExpression.Caller).Text)));
+            switch (callExpression.Caller.Kind)
+            {
+                case EmitKind.IdentifierExpression:
+                    instructions.Add(_asmBuilder.Call(new Operand(((EmitIdentifierExpression)callExpression.Caller).Text)));
+                    break;
+
+                case EmitKind.MemberExpression:
+                    var memberExpr = (EmitMemberExpression)callExpression.Caller;
+                    instructions.AddRange(VisitExpression(memberExpr.Left));
+                    instructions.Add(_asmBuilder.Call(new Operand(memberExpr.Right.Text)));
+                    break;
+                default:
+                    throw new UnreachableException();
+            }
 
             return instructions;
         }

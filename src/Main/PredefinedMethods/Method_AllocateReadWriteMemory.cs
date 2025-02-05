@@ -7,7 +7,6 @@ using JiteLang.Main.Emit.Tree.Expressions;
 using JiteLang.Main.PredefinedExternMethods;
 using JiteLang.Main.Shared.Type;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
 namespace JiteLang.Main.PredefinedMethods
 {

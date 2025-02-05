@@ -10,6 +10,7 @@ using JiteLang.Main.LangParser.SyntaxTree;
 using JiteLang.Main.LangParser.Types;
 using JiteLang.Main.PredefinedExternMethods.PredefinedExternMethods;
 using JiteLang.Main.Shared;
+using JiteLang.Main.Shared.Modifiers;
 using JiteLang.Main.Shared.Type;
 using JiteLang.Main.Shared.Type.Members;
 using JiteLang.Main.Shared.Type.Members.Method;
@@ -202,13 +203,13 @@ namespace JiteLang.Main.Bound
             BoundMethodDeclaration method = new(parent,
                 BindIdentifierExpression(methodDeclarationSyntax.Identifier, newScope, null!),
                 returnType,
-                methodDeclarationSyntax.Modifiers,
                 null!
             );
+            (method.Modifiers, method.AccessModifiers) = ConvertModifier(methodDeclarationSyntax.Modifiers);
             method.Identifier.Parent = method;
             method.Params = methodDeclarationSyntax.Params.Select(x => BindMethodParameter(x, newScope, method.Body)).ToList();
 
-            var isExtern = method.Modifiers.Any(x => x.Kind == SyntaxKind.ExternKeyword);
+            var isExtern = method.Modifiers.HasFlag(Modifier.Extern);
 
             _currentMethod = method;
 
@@ -326,6 +327,8 @@ namespace JiteLang.Main.Bound
             BoundFieldDeclaration fieldDeclaration = new(parent, identifier, fieldType);
             identifier.Parent = fieldDeclaration;
 
+            (fieldDeclaration.Modifiers, fieldDeclaration.AccessModifiers) = ConvertModifier(fieldDeclarationSyntax.Modifiers);
+
             if (fieldDeclarationSyntax.Variable.InitialValue is not null)
             {
                 var fieldValueType = _expressionVisitor.VisitExpression(fieldDeclarationSyntax.Variable.InitialValue, scope);
@@ -380,12 +383,12 @@ namespace JiteLang.Main.Bound
             return boundIfStmt;
         }
 
-        public virtual BoundStatement BindElseStatement(StatementSyntax elseStatementSyntax, TypeScope scope, BoundNode parent)
+        public virtual BoundStatement BindElseStatement(ElseStatementSyntax elseStatementSyntax, TypeScope scope, BoundNode parent)
         {
-            var boundElse = elseStatementSyntax.Kind switch
+            var boundElse = elseStatementSyntax.Else.Kind switch
             {
-                SyntaxKind.BlockStatement => BindElseBody((BlockStatement<SyntaxNode>)elseStatementSyntax),
-                SyntaxKind.IfStatement => BindIfStatement((IfStatementSyntax)elseStatementSyntax, scope, parent), //TODO: maybe use the 'newScope' for if else
+                SyntaxKind.BlockStatement => BindElseBody((BlockStatement<SyntaxNode>)elseStatementSyntax.Else),
+                SyntaxKind.IfStatement => BindIfStatement((IfStatementSyntax)elseStatementSyntax.Else, scope, parent), //TODO: maybe use the 'newScope' for if else
                 _ => throw new UnreachableException(),
             };
 
@@ -715,6 +718,29 @@ namespace JiteLang.Main.Bound
             };
 
             return builtKind;
+        }
+
+        private static (Modifier Modifiers, AccessModifier AccessModifiers) ConvertModifier(List<SyntaxToken> modifiers)
+        {
+            (Modifier Modifiers, AccessModifier AccessModifiers) result = (Modifier.None, AccessModifier.None);
+
+            foreach (var token in modifiers)
+            {
+                var acessModifier = SyntaxFacts.GetAccessModifier(token.Kind);
+                if (acessModifier != AccessModifier.None)
+                {
+                    result.AccessModifiers |= acessModifier;
+                    continue;
+                }
+                var modifier = SyntaxFacts.GetModifier(token.Kind);
+                if (modifier != Modifier.None)
+                {
+                    result.Modifiers |= modifier;
+                    continue;
+                }
+            }
+
+            return result;
         }
     }
 }

@@ -23,29 +23,24 @@ namespace JiteLang
             var text = """
 namespace Teste
 {
-    class Classe
+    class TestClass
     {
-
-        public int Metodo()
+        public int InstaceMethod(int parameter)
         {
-           return 145;
+            return parameter + 1;
         }
-
     }
 
     class AlgumaCoisa
     {
-        public int Main()
+        public static int Main()
         {
-            Classe alguma = new Classe();
-
-            return alguma.Metodo();
+            TestClass instance = new TestClass();
+            return instance.InstaceMethod(3);
         }
 
         //public extern void Print(string value);
     }
-
-
 }
 """;
             Compile(text);

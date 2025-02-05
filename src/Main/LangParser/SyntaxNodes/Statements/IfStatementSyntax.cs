@@ -7,7 +7,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
     {
         public override SyntaxKind Kind => SyntaxKind.IfStatement;
 
-        public IfStatementSyntax(SyntaxNode parent, ExpressionSyntax condition, BlockStatement<SyntaxNode> body, StatementSyntax? @else = null) : base(parent)
+        public IfStatementSyntax(SyntaxNode parent, ExpressionSyntax condition, BlockStatement<SyntaxNode> body, ElseStatementSyntax? @else = null) : base(parent)
         {
             Condition = condition;
             Body = body;
@@ -24,6 +24,6 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
 
         public BlockStatement<SyntaxNode> Body { get; set; }
 
-        public StatementSyntax? Else { get; set; }
+        public ElseStatementSyntax? Else { get; set; }
     }
 }
