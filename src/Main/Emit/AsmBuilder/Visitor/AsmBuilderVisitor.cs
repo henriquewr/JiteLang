@@ -474,6 +474,64 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
             return instructions;
         }
 
+        public List<Instruction> VisitJumpLogicalExpression(EmitLogicalExpression logicalExpression, Operand jumpIfFalse)
+        {
+            var instructions = VisitExpression(logicalExpression.Left);
+            instructions.AddRange(VisitExpression(logicalExpression.Right));
+
+            var rightOperand = Operand.Rbx;
+            var leftOperand = Operand.Rax;
+
+            instructions.Add(_asmBuilder.Pop(rightOperand));
+            instructions.Add(_asmBuilder.Pop(leftOperand));
+
+            var operation = logicalExpression.Operation;
+
+            switch (operation)
+            {
+                case LogicalOperatorKind.OrOr:
+                    instructions.Add(_asmBuilder.Or(leftOperand, rightOperand));
+                    instructions.Add(_asmBuilder.Je(jumpIfFalse));
+                    break;
+                case LogicalOperatorKind.AndAnd:
+                    instructions.Add(_asmBuilder.And(leftOperand, rightOperand));
+                    instructions.Add(_asmBuilder.Je(jumpIfFalse));
+                    break;
+
+                case LogicalOperatorKind.EqualsEquals:
+                    instructions.Add(_asmBuilder.Cmp(leftOperand, rightOperand));
+                    instructions.Add(_asmBuilder.Jne(jumpIfFalse));
+                    break;
+                case LogicalOperatorKind.NotEquals:
+                    instructions.Add(_asmBuilder.Cmp(leftOperand, rightOperand));
+                    instructions.Add(_asmBuilder.Je(jumpIfFalse));
+                    break;
+
+                case LogicalOperatorKind.GreaterThan:
+                    instructions.Add(_asmBuilder.Cmp(leftOperand, rightOperand));
+                    instructions.Add(_asmBuilder.Jle(jumpIfFalse));
+                    break;
+                case LogicalOperatorKind.GreaterThanOrEquals:
+                    instructions.Add(_asmBuilder.Cmp(leftOperand, rightOperand));
+                    instructions.Add(_asmBuilder.Jl(jumpIfFalse));
+                    break;
+
+                case LogicalOperatorKind.LessThan:
+                    instructions.Add(_asmBuilder.Cmp(leftOperand, rightOperand));
+                    instructions.Add(_asmBuilder.Jge(jumpIfFalse));
+                    break;
+                case LogicalOperatorKind.LessThanOrEquals:
+                    instructions.Add(_asmBuilder.Cmp(leftOperand, rightOperand));
+                    instructions.Add(_asmBuilder.Jg(jumpIfFalse));
+                    break;
+
+                default:
+                    throw new UnreachableException();
+            }
+            
+            return instructions;
+        }
+
         public List<Instruction> VisitLiteralExpression(EmitLiteralExpression literalExpression)
         {
             var instructions = new List<Instruction>();
@@ -514,6 +572,27 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
             instructions.Add(_asmBuilder.Push(operand));
 
             return instructions;
+        }       
+        
+        public List<Instruction> VisitJumpLiteralExpression(EmitLiteralExpression literalExpression, Operand jumpIfFalse)
+        {
+            var instructions = new List<Instruction>();
+
+            var literalValue = literalExpression.Value;
+
+            switch (literalValue.Kind)
+            {
+                case ConstantValueKind.Bool:
+                    if (literalValue.BoolValue == false)
+                    {
+                        instructions.Add(_asmBuilder.Jmp(jumpIfFalse));
+                    }
+
+                    return instructions;
+
+                default:
+                    throw new NotImplementedException();
+            }
         }
 
         public List<Instruction> VisitReferenceMemberExpression(EmitMemberExpression memberExpression)
@@ -654,15 +733,27 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
 
         public List<Instruction> VisitCondition(EmitCondition condition)
         {
-            var instructions = VisitExpression(condition.Condition);
-
-            instructions.Add(_asmBuilder.Pop(Operand.Rax));
-            instructions.Add(_asmBuilder.Test(Operand.Rax, Operand.Rax));
-
             var jumpFalseLabel = new Operand(condition.JumpIfFalse.Label.Name);
-            instructions.Add(_asmBuilder.Je(jumpFalseLabel));
 
-            return instructions;
+            switch (condition.Condition.Kind)
+            {
+                case EmitKind.LiteralExpression:
+                    return VisitJumpLiteralExpression((EmitLiteralExpression)condition.Condition, jumpFalseLabel);
+
+                case EmitKind.LogicalExpression:
+                    return VisitJumpLogicalExpression((EmitLogicalExpression)condition.Condition, jumpFalseLabel);
+
+                default:
+                    //slow path
+                    var instructions = VisitExpression(condition.Condition);
+
+                    instructions.Add(_asmBuilder.Pop(Operand.Rax));
+                    instructions.Add(_asmBuilder.Test(Operand.Rax, Operand.Rax));
+
+                    instructions.Add(_asmBuilder.Je(jumpFalseLabel));
+
+                    return instructions;
+            }
         }
 
         private List<Instruction> VisitDefaultBlock(EmitNode item)

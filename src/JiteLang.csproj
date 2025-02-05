@@ -5,8 +5,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyVersion>2025.2.5.24</AssemblyVersion>
-    <FileVersion>2025.2.5.24</FileVersion>
+    <AssemblyVersion>2025.2.5.121</AssemblyVersion>
+    <FileVersion>2025.2.5.121</FileVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 

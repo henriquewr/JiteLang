@@ -145,6 +145,20 @@ namespace JiteLang.Main.Emit
                             Setg(operand.Value);
                             break;
 
+                        case AsmInstructionType.Jg:
+                            Jg(operand.Value);
+                            break;
+
+                        case AsmInstructionType.Jge:
+                            Jge(operand.Value);
+                            break;
+
+                        case AsmInstructionType.Jl:
+                            Jl(operand.Value);
+                            break;
+                        case AsmInstructionType.Jle:
+                            Jle(operand.Value);
+                            break;
                         default:
                             throw new UnreachableException();
                     }
@@ -247,6 +261,22 @@ namespace JiteLang.Main.Emit
         public void Setg(string operand)
         {
             _outputWriter.WriteLine($"    setg {operand}");
+        }
+        public void Jg(string operand)
+        {
+            _outputWriter.WriteLine($"    jg {operand}");
+        }
+        public void Jge(string operand)
+        {
+            _outputWriter.WriteLine($"    jge {operand}");
+        }
+        public void Jl(string operand)
+        {
+            _outputWriter.WriteLine($"    jl {operand}");
+        }
+        public void Jle(string operand)
+        {
+            _outputWriter.WriteLine($"    jle {operand}");
         }
         public void Setge(string operand)
         {

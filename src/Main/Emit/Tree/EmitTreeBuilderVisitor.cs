@@ -14,9 +14,7 @@ using System.Collections.Generic;
 using JiteLang.Main.Emit.AsmBuilder.Scope;
 using JiteLang.Main.PredefinedMethods;
 using JiteLang.Main.Shared.Modifiers;
-using System.Reflection.Metadata;
 using JiteLang.Main.Shared.Type;
-using System.Data.Common;
 
 namespace JiteLang.Main.Emit.Tree
 {

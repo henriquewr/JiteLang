@@ -35,8 +35,15 @@ namespace Teste
     {
         public static int Main()
         {
-            TestClass instance = new TestClass();
-            return instance.InstaceMethod(3);
+            //TestClass instance = null;
+
+            int i = 0;
+            while(i < 999999999)
+            {
+                i = i + 1;
+            }
+
+            return i;
         }
 
         //public extern void Print(string value);
@@ -196,16 +203,18 @@ namespace Teste
             }
 
             Console.WriteLine($"Executing code...{Environment.NewLine}");
-
+            Stopwatch stopwatch = Stopwatch.StartNew();
             var codeProcess = Process.Start(exeFile);
 
             codeProcess.WaitForExit();
-
+            stopwatch.Stop();
             string codeError = linkProcess.StandardError.ReadToEnd();
             string codeOutput = linkProcess.StandardOutput.ReadToEnd();
 
             Console.WriteLine(Environment.NewLine);
             Console.WriteLine($"Exit code: {codeProcess.ExitCode} at {codeProcess.ExitTime.ToLongTimeString()}");
+
+            Console.WriteLine($"Execution time: {stopwatch.ElapsedMilliseconds - 187} ms");
         }
     }
 }
