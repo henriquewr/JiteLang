@@ -684,9 +684,9 @@ namespace JiteLang.Main.Bound
             builtCallExpression.Caller = BindExpression(callExpressionSyntax.Caller, scope, builtCallExpression);
             builtCallExpression.Args = callExpressionSyntax.Args.Select(item => BindExpression(item, scope, builtCallExpression)).ToList();
 
-            if (builtCallExpression.Type is not DelegateTypeSymbol methodType)
+            if (builtCallExpression.Caller.Type is not DelegateTypeSymbol methodType)
             {
-                AddError($"The type {builtCallExpression.Type.FullText} is not a method type", callExpressionSyntax.Position);
+                AddError($"The type {builtCallExpression.Caller.Type.FullText} is not a method type", callExpressionSyntax.Position);
             }
             else
             {

@@ -23,6 +23,17 @@ namespace JiteLang
             var text = """
 namespace Teste
 {
+
+    class TestClass2
+    {
+        public int Test = 124;
+
+        public int GetTestValuePlus124(int value)
+        {
+            return Test + value;
+        }
+    }
+
     class TestClass
     {
         public int Test = 123;
@@ -39,7 +50,13 @@ namespace Teste
         {
             TestClass instance = new TestClass();
             instance.Test = 333;
-            return instance.GetTest();
+
+
+            TestClass2 instance2 = new TestClass2(); 
+
+            int newValue = instance2.GetTestValuePlus124(instance.GetTest());
+
+            return newValue;
         }
 
         public extern void Print(string value);

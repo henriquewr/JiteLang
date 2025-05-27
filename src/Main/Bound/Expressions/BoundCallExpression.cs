@@ -1,4 +1,5 @@
 ﻿using JiteLang.Main.Shared.Type;
+using System;
 using System.Collections.Generic;
 
 namespace JiteLang.Main.Bound.Expressions
@@ -10,11 +11,11 @@ namespace JiteLang.Main.Bound.Expressions
         { 
             get
             {
-                return Caller.Type; 
+                return ((DelegateTypeSymbol)Caller.Type).ReturnType; 
             } 
             set 
-            { 
-                Caller.Type = value; 
+            {
+                throw new InvalidOperationException();
             } 
         }
              

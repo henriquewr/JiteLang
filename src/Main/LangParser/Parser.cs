@@ -144,13 +144,11 @@ namespace JiteLang.Main.LangParser
                     return ParseWhileStatement();
 
                 default:
-                    throw new NotImplementedException();
-                    // syntax error probably
-                    //if (SyntaxFacts.IsPredefinedType(token.Kind))
-                    //{
-                    //    return ParseFieldDeclaration();
-                    //}
-                    //_tokens.Advance();
+                    if (SyntaxFacts.IsPredefinedType(token.Kind))
+                    {
+                        return ParseLocalDeclaration();
+                    }
+                    _tokens.Advance();
                     break;
             }
 
@@ -765,6 +763,7 @@ namespace JiteLang.Main.LangParser
 
             var args = ParseArgs();
             var newExpr = new NewExpressionSyntax(type, args);
+            newExpr.Position = typeToken.Position;
 
             Expect(SyntaxKind.CloseParenToken, "Expected ')'");
 
