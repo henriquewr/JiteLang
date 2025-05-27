@@ -1,23 +1,26 @@
-﻿using JiteLang.Main.Bound.Statements;
-using JiteLang.Main.Bound.Statements.Declaration;
+﻿using JiteLang.Main.Shared.Type;
 using JiteLang.Syntax;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JiteLang.Main.Bound.Expressions
 {
     internal class BoundIdentifierExpression : BoundExpression
     {
         public override BoundKind Kind => BoundKind.IdentifierExpression;
-        public BoundIdentifierExpression(BoundNode parent, string text, SyntaxPosition position) : base(parent)
+        public override TypeSymbol Type { get; set; }
+        public BoundIdentifierExpression(BoundNode? parent, string text, TypeSymbol type) : base(parent)
         {
             Text = text;
-            Position = position;
+            Type = type;
         }
 
         public string Text { get; set; }
+
+        public override void SetParent()
+        {
+        }
+
+        public override void SetParentRecursive()
+        {
+        }
     }
 }

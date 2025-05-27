@@ -15,7 +15,8 @@ namespace JiteLang.Main.Visitor.Syntax
         TMethod> : ISyntaxVisitor<IList<SyntaxNode>,
         ClassDeclarationSyntax, 
         MethodDeclarationSyntax, 
-        VariableDeclarationSyntax, 
+        FieldDeclarationSyntax, 
+        LocalDeclarationSyntax, 
         AssignmentExpressionSyntax, 
         ExpressionSyntax, 
         StatementSyntax,
@@ -58,8 +59,8 @@ namespace JiteLang.Main.Visitor.Syntax
                     case SyntaxKind.MethodDeclaration:
                         newNodes.Add(VisitMethodDeclaration((MethodDeclarationSyntax)item, newScope));
                         break;
-                    case SyntaxKind.VariableDeclaration:
-                        newNodes.Add(VisitVariableDeclaration((VariableDeclarationSyntax)item, newScope));
+                    case SyntaxKind.FieldDeclaration:
+                        newNodes.Add(VisitFieldDeclaration((FieldDeclarationSyntax)item, newScope));
                         break;
                     default:
                         throw new UnreachableException();
@@ -90,8 +91,8 @@ namespace JiteLang.Main.Visitor.Syntax
                     case SyntaxKind.MethodDeclaration:
                         newNodes.Add(VisitMethodDeclaration((MethodDeclarationSyntax)item, newScope));
                         break;
-                    case SyntaxKind.VariableDeclaration:
-                        newNodes.Add(VisitVariableDeclaration((VariableDeclarationSyntax)item, newScope));
+                    case SyntaxKind.LocalDeclaration:
+                        newNodes.Add(VisitLocalDeclaration((LocalDeclarationSyntax)item, newScope));
                         break;       
                     case SyntaxKind.ReturnStatement:
                         newNodes.Add(VisitReturnStatement((ReturnStatementSyntax)item, newScope));
@@ -113,14 +114,24 @@ namespace JiteLang.Main.Visitor.Syntax
             return parameterDeclarationSyntax;
         }
 
-        public virtual VariableDeclarationSyntax VisitVariableDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, TScope scope)
+        public virtual FieldDeclarationSyntax VisitFieldDeclaration(FieldDeclarationSyntax fieldDeclarationSyntax, TScope scope)
         {
-            if (variableDeclarationSyntax.InitialValue is not null)
+            if (fieldDeclarationSyntax.InitialValue is not null)
             {
-                variableDeclarationSyntax.InitialValue = VisitExpression(variableDeclarationSyntax.InitialValue, scope);
+                fieldDeclarationSyntax.InitialValue = VisitExpression(fieldDeclarationSyntax.InitialValue, scope);
             }
 
-            return variableDeclarationSyntax;
+            return fieldDeclarationSyntax;
+        }
+
+        public virtual LocalDeclarationSyntax VisitLocalDeclaration(LocalDeclarationSyntax localDeclarationSyntax, TScope scope)
+        {
+            if (localDeclarationSyntax.InitialValue is not null)
+            {
+                localDeclarationSyntax.InitialValue = VisitExpression(localDeclarationSyntax.InitialValue, scope);
+            }
+
+            return localDeclarationSyntax;
         }
         #endregion Declarations
 
@@ -159,8 +170,8 @@ namespace JiteLang.Main.Visitor.Syntax
                     case SyntaxKind.MethodDeclaration:
                         newNodes.Add(VisitMethodDeclaration((MethodDeclarationSyntax)item, newScope));
                         break;
-                    case SyntaxKind.VariableDeclaration:
-                        newNodes.Add(VisitVariableDeclaration((VariableDeclarationSyntax)item, newScope));
+                    case SyntaxKind.LocalDeclaration:
+                        newNodes.Add(VisitLocalDeclaration((LocalDeclarationSyntax)item, newScope));
                         break;
                     case SyntaxKind.ReturnStatement:
                         newNodes.Add(VisitReturnStatement((ReturnStatementSyntax)item, newScope));

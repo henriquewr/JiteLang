@@ -1,20 +1,21 @@
-﻿using JiteLang.Main.Bound.Expressions;
-using JiteLang.Main.Shared.Type;
+﻿using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
+using JiteLang.Main.LangParser.Types;
+using JiteLang.Syntax;
 
-namespace JiteLang.Main.Bound.Statements.Declaration
+namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
 {
-    internal class BoundLocalDeclaration : BoundVariableDeclaration
+    internal class LocalDeclarationSyntax : VariableDeclarationSyntax
     {
-        public override BoundKind Kind => BoundKind.LocalDeclaration;
+        public override SyntaxKind Kind => SyntaxKind.LocalDeclaration;
 
-        public BoundLocalDeclaration(BoundNode? parent, BoundIdentifierExpression identifier, TypeSymbol type, BoundExpression? initialValue = null) : base(parent, identifier, type)
+        public LocalDeclarationSyntax(IdentifierExpressionSyntax identifier, TypeSyntax type, ExpressionSyntax? initialValue = null) : base(identifier, type, initialValue)
         {
-            InitialValue = initialValue;
         }
 
         public override void SetParent()
         {
             Identifier.Parent = this;
+
             if (InitialValue is not null)
             {
                 InitialValue.Parent = this;
@@ -25,13 +26,12 @@ namespace JiteLang.Main.Bound.Statements.Declaration
         {
             Identifier.Parent = this;
             Identifier.SetParentRecursive();
+
             if (InitialValue is not null)
             {
                 InitialValue.Parent = this;
                 InitialValue.SetParentRecursive();
             }
         }
-
-        public BoundExpression? InitialValue { get; set; }
     }
 }

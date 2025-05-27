@@ -1,15 +1,11 @@
 ﻿using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.Types;
-using JiteLang.Syntax;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
 {
-    internal class VariableDeclarationSyntax : DeclarationSyntax
+    internal abstract class VariableDeclarationSyntax : DeclarationSyntax
     { 
-        //TODO make this class abstract and create a LocalDeclarationSyntax
-        public override SyntaxKind Kind => SyntaxKind.VariableDeclaration;
-
-        public VariableDeclarationSyntax(SyntaxNode parent, IdentifierExpressionSyntax identifier, TypeSyntax type, ExpressionSyntax? initialValue = null) : base(parent, identifier)
+        public VariableDeclarationSyntax(IdentifierExpressionSyntax identifier, TypeSyntax type, ExpressionSyntax? initialValue = null) : base(identifier)
         {
             Type = type;
             InitialValue = initialValue;

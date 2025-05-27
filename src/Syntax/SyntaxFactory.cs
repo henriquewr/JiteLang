@@ -57,23 +57,23 @@ namespace JiteLang.Syntax
             return predefined;
         }
 
-        public static VariableDeclarationSyntax DeclareVariable(in TokenInfo token, SyntaxNode parent, IdentifierExpressionSyntax identifier)
+        public static LocalDeclarationSyntax DeclareLocal(in TokenInfo typeToken, IdentifierExpressionSyntax identifier)
         {
-            var type = Type(token);
+            var type = Type(typeToken);
 
-            var varDeclaration = new VariableDeclarationSyntax(parent, identifier, type);
+            var varDeclaration = new LocalDeclarationSyntax(identifier, type);
 
             return varDeclaration;
         }
 
-        public static IdentifierExpressionSyntax Identifier(SyntaxNode parent, in TokenInfo token)
+        public static IdentifierExpressionSyntax Identifier(in TokenInfo token)
         {
-            return Identifier(token.Text, parent, token.Position);
+            return Identifier(token.Text, token.Position);
         }
 
-        public static IdentifierExpressionSyntax Identifier(string text, SyntaxNode parent, in SyntaxPosition position)
+        public static IdentifierExpressionSyntax Identifier(string text, in SyntaxPosition position)
         {
-            var identifier = new IdentifierExpressionSyntax(parent, text, position);
+            var identifier = new IdentifierExpressionSyntax(text, position);
             return identifier;
         }
 
@@ -111,9 +111,9 @@ namespace JiteLang.Syntax
             return token;
         }
 
-        public static LiteralExpressionSyntax LiteralExpression(SyntaxNode parent, SyntaxToken tokenWithValue)
+        public static LiteralExpressionSyntax LiteralExpression(SyntaxToken tokenWithValue)
         {
-            var literalExpression = new LiteralExpressionSyntax(parent, tokenWithValue);
+            var literalExpression = new LiteralExpressionSyntax(tokenWithValue);
             return literalExpression;
         }
     }

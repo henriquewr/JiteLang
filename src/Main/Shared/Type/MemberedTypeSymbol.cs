@@ -46,7 +46,7 @@ namespace JiteLang.Main.Shared.Type
 
         public CtorSymbol? GetMatchingCtor(BindingContext bindingContext, IList<TypeSymbol> argsTypes)
         {
-            var ctors = Constructors.Where(x => x.Parameters.Count == argsTypes.Count);
+            var ctors = GetCtors(argsTypes.Count);
 
             foreach (var ctor in ctors)
             {
@@ -71,6 +71,12 @@ namespace JiteLang.Main.Shared.Type
             }
 
             return null;
+        }
+
+        public IEnumerable<CtorSymbol> GetCtors(int paramsCount)
+        {
+            var ctors = Constructors.Where(x => x.Parameters.Count == paramsCount);
+            return ctors;
         }
 
         public List<CtorSymbol> Constructors { get; set; }

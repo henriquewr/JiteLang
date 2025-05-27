@@ -11,15 +11,6 @@ namespace JiteLang.Main.Emit.Tree.Utils
             JumpIfFalse = jumpIfFalse;
         }
 
-        public EmitCondition(EmitNode parent, EmitExpression condition, string jumpIfFalseLabelName)
-        {
-            Condition = condition;
-
-            EmitJumpStatement jumpIfFalse = new(parent, EmitLabelStatement.Create(null!, jumpIfFalseLabelName));
-            jumpIfFalse.Label.Parent = jumpIfFalse;
-            JumpIfFalse = jumpIfFalse;
-        }
-
         public EmitExpression Condition { get; set; }
 
         public EmitJumpStatement JumpIfFalse { get; set; }

@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using JiteLang.Syntax;
+﻿using JiteLang.Syntax;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
 {
     internal class LiteralExpressionSyntax : ExpressionSyntax
     {
-        public LiteralExpressionSyntax(SyntaxNode parent, SyntaxToken value) : base(parent)
+        public LiteralExpressionSyntax(SyntaxToken value) : base()
         {
             Value = value;
             Position = value.Position;
@@ -17,5 +12,13 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
 
         public override SyntaxKind Kind => SyntaxKind.LiteralExpression;
         public SyntaxToken Value { set; get; }
+
+        public override void SetParent()
+        {
+        }
+
+        public override void SetParentRecursive()
+        {
+        }
     }
 }

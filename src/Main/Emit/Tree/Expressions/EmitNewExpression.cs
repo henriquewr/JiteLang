@@ -7,14 +7,25 @@ namespace JiteLang.Main.Emit.Tree.Expressions
     internal class EmitNewExpression : EmitExpression
     {
         public override EmitKind Kind => EmitKind.NewExpression;
-        public override TypeSymbol Type { get; }
+        public override TypeSymbol Type { get; set; }
 
-        public EmitNewExpression(EmitNode parent, TypeSymbol type) : base(parent)
+        public EmitNewExpression(EmitNode? parent, TypeSymbol type, EmitBlockStatement<EmitNode, CodeLocal> initializer) : base(parent)
         {
             Type = type;
-            Initializer = new(this);
+            Initializer = initializer;
         }
 
         public EmitBlockStatement<EmitNode, CodeLocal> Initializer { get; set; }
+
+        public override void SetParent()
+        {
+            Initializer.Parent = this;
+        }
+
+        public override void SetParentRecursive()
+        {
+            Initializer.Parent = this;
+            Initializer.SetParentRecursive();
+        }
     }
 }

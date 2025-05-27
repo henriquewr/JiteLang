@@ -1,13 +1,11 @@
-﻿using System.Collections.Generic;
-using JiteLang.Main.LangParser.SyntaxNodes;
-using JiteLang.Main.Bound.Expressions;
+﻿using JiteLang.Main.Bound.Expressions;
 using JiteLang.Main.Shared.Type;
 
 namespace JiteLang.Main.Bound.Statements.Declaration
 {
     internal abstract class BoundVariableDeclaration : BoundDeclaration
     {
-        public BoundVariableDeclaration(BoundNode parent, BoundIdentifierExpression identifier, TypeSymbol type) : base(parent, identifier) 
+        public BoundVariableDeclaration(BoundNode? parent, BoundIdentifierExpression identifier, TypeSymbol type) : base(parent, identifier) 
         {
             Type = type;
         }

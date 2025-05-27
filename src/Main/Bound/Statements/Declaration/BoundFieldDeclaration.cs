@@ -8,11 +8,22 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.FieldDeclaration;
 
-        public BoundFieldDeclaration(BoundNode parent, BoundIdentifierExpression identifierExpression, TypeSymbol type) : base(parent, identifierExpression, type)
+        public BoundFieldDeclaration(BoundNode? parent, BoundIdentifierExpression identifierExpression, TypeSymbol type) : base(parent, identifierExpression, type)
         {
         }
 
         public Modifier Modifiers { get; set; }
         public AccessModifier AccessModifiers { get; set; }
+
+        public override void SetParent()
+        {
+            Identifier.Parent = this;
+        }
+
+        public override void SetParentRecursive()
+        {
+            SetParent();
+            Identifier.SetParentRecursive();
+        }
     }
 }

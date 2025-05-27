@@ -1,34 +1,40 @@
 ﻿using JiteLang.Main.Emit.Tree.Expressions;
 using JiteLang.Main.Emit.Tree.Statements.Declarations;
-using System.Diagnostics;
 
 namespace JiteLang.Main.Emit.Tree.Statements
 {
     internal class EmitReturnStatement : EmitStatement
     {
         public override EmitKind Kind => EmitKind.ReturnStatement;
-        public EmitReturnStatement(EmitNode parent) : base(parent)
-        { 
+        public EmitReturnStatement(EmitNode? parent, EmitExpression? returnValue = null) : base(parent)
+        {
+            ReturnValue = returnValue;
         }
 
         public EmitExpression? ReturnValue { get; set; }
 
         public EmitMethodDeclaration GetMethod()
         {
-            var current = Parent;
+            var method = Parent!.GetFirstOrDefaultOfType<EmitMethodDeclaration>()!;
 
-            while (current != null)
+            return method;
+        }
+
+        public override void SetParent()
+        {
+            if (ReturnValue is not null)
             {
-                if (current.Kind == EmitKind.MethodDeclaration)
-                {
-                    var method = (EmitMethodDeclaration)current;
-                    return method;
-                }
-
-                current = current.Parent;
+                ReturnValue.Parent = this;
             }
+        }
 
-            throw new UnreachableException();
+        public override void SetParentRecursive()
+        {
+            if (ReturnValue is not null)
+            {
+                ReturnValue.Parent = this;
+                ReturnValue.SetParentRecursive();
+            }
         }
     }
 }

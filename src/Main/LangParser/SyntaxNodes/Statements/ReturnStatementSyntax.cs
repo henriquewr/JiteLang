@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
+﻿using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Syntax;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
@@ -12,15 +7,32 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
     {
         public override SyntaxKind Kind => SyntaxKind.ReturnStatement;
 
-        public ReturnStatementSyntax(SyntaxNode parent) : base(parent)
+        public ReturnStatementSyntax() : base()
         {
         }
 
-        public ReturnStatementSyntax(SyntaxNode parent, ExpressionSyntax returnValue) : base(parent)
+        public ReturnStatementSyntax(ExpressionSyntax? returnValue = null) : base()
         {
             ReturnValue = returnValue;
         }
 
         public ExpressionSyntax? ReturnValue { get; set; }
+
+        public override void SetParent()
+        {
+            if (ReturnValue is not null) 
+            {
+                ReturnValue.Parent = this;
+            }
+        }
+
+        public override void SetParentRecursive()
+        {
+            if (ReturnValue is not null)
+            {
+                ReturnValue.Parent = this;
+                ReturnValue.SetParentRecursive();
+            }
+        }
     }
 }

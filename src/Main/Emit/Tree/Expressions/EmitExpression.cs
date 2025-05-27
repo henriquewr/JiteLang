@@ -4,10 +4,10 @@ namespace JiteLang.Main.Emit.Tree.Expressions
 {
     internal abstract class EmitExpression : EmitNode
     {
-        public EmitExpression(EmitNode parent) : base(parent)
+        protected EmitExpression(EmitNode? parent) : base(parent)
         {
         }
 
-        public abstract TypeSymbol Type { get; }
+        public abstract TypeSymbol Type { get; set; }
     }
 }

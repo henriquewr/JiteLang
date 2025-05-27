@@ -4,13 +4,24 @@ using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 
 namespace JiteLang.Main.Visitor.Syntax
 {
-    internal interface ISyntaxVisitor<TNamespaceDeclaration, TClassDeclaration, TMethodDeclaration, TVariableDeclaration, TAssignmentExpression, TExpression, TStatement, TLiteralExpression, TParameterDeclaration, TScope>
+    internal interface ISyntaxVisitor<TNamespaceDeclaration,
+        TClassDeclaration,
+        TMethodDeclaration, 
+        TFieldDeclaration,
+        TLocalDeclaration,
+        TAssignmentExpression,
+        TExpression,
+        TStatement,
+        TLiteralExpression,
+        TParameterDeclaration,
+        TScope>
     {
         #region Declarations
         TNamespaceDeclaration VisitNamespaceDeclaration(NamespaceDeclarationSyntax root, TScope scope);
         TClassDeclaration VisitClassDeclaration(ClassDeclarationSyntax classDeclaration, TScope scope);
         TMethodDeclaration VisitMethodDeclaration(MethodDeclarationSyntax methodDeclarationSyntax, TScope scope);
-        TVariableDeclaration VisitVariableDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, TScope scope);
+        TFieldDeclaration VisitFieldDeclaration(FieldDeclarationSyntax fieldDeclarationSyntax, TScope scope);
+        TLocalDeclaration VisitLocalDeclaration(LocalDeclarationSyntax localDeclarationSyntax, TScope scope);
         TParameterDeclaration VisitMethodParameter(ParameterDeclarationSyntax parameterDeclarationSyntax, TScope scope);
         #endregion Declarations
 
@@ -41,7 +52,8 @@ namespace JiteLang.Main.Visitor.Syntax
         void VisitNamespaceDeclaration(NamespaceDeclarationSyntax root, TScope scope);
         void VisitClassDeclaration(ClassDeclarationSyntax classDeclaration, TScope scope);
         void VisitMethodDeclaration(MethodDeclarationSyntax methodDeclarationSyntax, TScope scope);
-        void VisitVariableDeclaration(VariableDeclarationSyntax variableDeclarationSyntax, TScope scope);
+        void VisitFieldDeclaration(FieldDeclarationSyntax fieldDeclarationSyntax, TScope scope);
+        void VisitLocalDeclaration(LocalDeclarationSyntax localDeclarationSyntax, TScope scope);
         void VisitMethodParameter(ParameterDeclarationSyntax parameterDeclarationSyntax, TScope scope);
         #endregion Declarations
 

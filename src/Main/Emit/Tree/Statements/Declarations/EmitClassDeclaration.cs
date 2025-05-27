@@ -8,9 +8,9 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
     {
         public override EmitKind Kind => EmitKind.ClassDeclaration;
 
-        public EmitClassDeclaration(EmitNode parent, TypeSymbol type, string name) : base(parent, name)
+        public EmitClassDeclaration(EmitNode? parent, TypeSymbol type, string name, EmitBlockStatement<EmitNode, CodeField> body) : base(parent, name)
         {
-            Body = new(this);
+            Body = body;
             Type = type;
         }
 
@@ -29,6 +29,17 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
         {
             var parentNamespace = (EmitNamespaceDeclaration)Parent.Parent!;
             return $"{parentNamespace.Name}{separator}{Name}";
+        }
+
+        public override void SetParent()
+        {
+            Body.Parent = this;
+        }
+
+        public override void SetParentRecursive()
+        {
+            SetParent();
+            Body.SetParentRecursive();
         }
     }
 }

@@ -6,11 +6,19 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
     {
         public override EmitKind Kind => EmitKind.FieldDeclaration;
 
-        public EmitFieldDeclaration(EmitNode parent, string name) : base(parent, name)
+        public EmitFieldDeclaration(EmitNode? parent, string name) : base(parent, name)
         {
         }
 
         public Modifier Modifiers { get; set; }
         public AccessModifier AccessModifiers { get; set; }
+
+        public override void SetParent()
+        {
+        }
+
+        public override void SetParentRecursive()
+        {
+        }
     }
 }

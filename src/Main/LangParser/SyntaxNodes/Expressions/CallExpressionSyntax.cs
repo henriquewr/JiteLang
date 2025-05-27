@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using JiteLang.Syntax;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
@@ -8,20 +7,35 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.CallExpression;
 
-        public CallExpressionSyntax(SyntaxNode parent, ExpressionSyntax caller, List<ExpressionSyntax> args) : base(parent)
+        public CallExpressionSyntax(ExpressionSyntax caller, List<ExpressionSyntax> args) : base()
         {
             Caller = caller;
             Args = args;
             Position = caller.Position;
         }
 
-        public CallExpressionSyntax(SyntaxNode parent, ExpressionSyntax caller) : base(parent)
-        {
-            Caller = caller;
-            Args = new List<ExpressionSyntax>();
-        }
-
         public ExpressionSyntax Caller { get; set; }
         public List<ExpressionSyntax> Args { get; set; }
+
+        public override void SetParent()
+        {
+            Caller.Parent = this;
+
+            foreach (var arg in Args)
+            {
+                arg.Parent = this;
+            }
+        }
+        public override void SetParentRecursive()
+        {
+            Caller.Parent = this;
+            Caller.SetParentRecursive();
+
+            foreach (var arg in Args)
+            {
+                arg.Parent = this;
+                arg.SetParentRecursive();
+            }
+        }
     }
 }

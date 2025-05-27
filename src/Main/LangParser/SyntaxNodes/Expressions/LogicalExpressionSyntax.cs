@@ -7,7 +7,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.LogicalExpression;
 
-        public LogicalExpressionSyntax(SyntaxNode parent, ExpressionSyntax left, LogicalOperatorKind operation, ExpressionSyntax right) : base(parent)
+        public LogicalExpressionSyntax(ExpressionSyntax left, LogicalOperatorKind operation, ExpressionSyntax right) : base()
         {
             Left = left;
             Operation = operation;
@@ -17,5 +17,20 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
         public ExpressionSyntax Left { get; set; }
         public LogicalOperatorKind Operation { get; set; }
         public ExpressionSyntax Right { get; set; }
+
+        public override void SetParent()
+        {
+            Left.Parent = this;
+            Right.Parent = this;
+        }
+
+        public override void SetParentRecursive()
+        {
+            Left.Parent = this;
+            Right.Parent = this;
+
+            Left.SetParentRecursive();
+            Right.SetParentRecursive();
+        }
     }
 }

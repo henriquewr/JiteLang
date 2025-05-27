@@ -1,5 +1,4 @@
-﻿using JiteLang.Main.AsmBuilder.Scope;
-using JiteLang.Main.Emit.AsmBuilder.Scope;
+﻿using JiteLang.Main.Emit.AsmBuilder.Scope;
 using JiteLang.Main.Emit.Tree.Expressions;
 using JiteLang.Main.Shared;
 using System.Diagnostics;
@@ -10,8 +9,9 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
     {
         public override EmitKind Kind => EmitKind.LocalDeclaration;
 
-        public EmitLocalDeclaration(EmitNode parent, string name) : base(parent, name)
+        public EmitLocalDeclaration(EmitNode? parent, string name, EmitExpression? initialValue = null) : base(parent, name)
         {
+            InitialValue = initialValue;
         }
 
         public EmitExpression? InitialValue { get; set; }
@@ -53,6 +53,23 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
             }
 
             throw new UnreachableException();
+        }
+
+        public override void SetParent()
+        {
+            if (InitialValue is not null)
+            {
+                InitialValue.Parent = this;
+            }
+        }
+
+        public override void SetParentRecursive()
+        {
+            if (InitialValue is not null)
+            {
+                InitialValue.Parent = this;
+                InitialValue.SetParentRecursive();
+            }
         }
     }
 }

@@ -6,7 +6,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.MemberExpression;
 
-        public MemberExpressionSyntax(SyntaxNode parent, ExpressionSyntax left, IdentifierExpressionSyntax right) : base(parent)
+        public MemberExpressionSyntax(ExpressionSyntax left, IdentifierExpressionSyntax right) : base()
         {
             Left = left;
             Right = right;
@@ -14,5 +14,20 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
 
         public ExpressionSyntax Left { get; set; }
         public IdentifierExpressionSyntax Right { get; set; }
+
+        public override void SetParent()
+        {
+            Left.Parent = this;
+            Right.Parent = this;
+        }
+
+        public override void SetParentRecursive()
+        {
+            Left.Parent = this;
+            Right.Parent = this;
+
+            Left.SetParentRecursive();
+            Right.SetParentRecursive();
+        }
     }
 }

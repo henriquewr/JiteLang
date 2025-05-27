@@ -25,9 +25,11 @@ namespace Teste
 {
     class TestClass
     {
-        public int InstaceMethod(int parameter)
+        public int Test = 123;
+
+        public int GetTest()
         {
-            return parameter + 1;
+            return Test;
         }
     }
 
@@ -35,18 +37,12 @@ namespace Teste
     {
         public static int Main()
         {
-            //TestClass instance = null;
-
-            int i = 0;
-            while(i < 999999999)
-            {
-                i = i + 1;
-            }
-
-            return i;
+            TestClass instance = new TestClass();
+            instance.Test = 333;
+            return instance.GetTest();
         }
 
-        //public extern void Print(string value);
+        public extern void Print(string value);
     }
 }
 """;
@@ -151,7 +147,7 @@ namespace Teste
             string nasmPath = @"nasm";
             string kernel32Path = @"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64\kernel32.lib";
             string user32Path = @"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64\User32.Lib";
-            string linkerPath = @"H:\Microsoft Visual Studio 2022\VC\Tools\MSVC\14.42.34433\bin\Hostx64\x64\link.exe";
+            string linkerPath = @"H:\Microsoft Visual Studio 2022\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe";
 
             Process nasmProcess = new Process
             {

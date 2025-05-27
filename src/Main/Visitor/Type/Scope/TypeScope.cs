@@ -77,9 +77,9 @@ namespace JiteLang.Main.Visitor.Type.Scope
             return null;
         }
 
-        public TypeVariable AddVariable(string name, TypeSymbol type)
+        public TypeLocal AddVariable(string name, TypeSymbol type)
         {
-            var variable = new TypeVariable(type, name);
+            var variable = new TypeLocal(type, name);
 
             Variables.Add(name, variable);
 

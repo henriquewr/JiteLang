@@ -1,5 +1,5 @@
 ﻿
-using System.Linq.Expressions;
+using JiteLang.Main.Shared.Type;
 
 namespace JiteLang.Main.Bound.Expressions
 {
@@ -7,16 +7,41 @@ namespace JiteLang.Main.Bound.Expressions
     {
         public override BoundKind Kind => BoundKind.AssignmentExpression;
 
-        public BoundAssignmentExpression(BoundNode parent, BoundExpression left, BoundKind @operator, BoundExpression right) : base(parent)
+        public override TypeSymbol Type
+        {
+            get
+            {
+                return Left.Type;
+            }
+            set
+            {
+                Left.Type = value;
+            }
+        }
+
+        public BoundAssignmentExpression(BoundNode? parent, BoundExpression left, BoundKind @operator, BoundExpression right) : base(parent)
         {
             Right = right;
             Operator = @operator;
             Left = left;
         }
 
+        public override void SetParent()
+        {
+            Right.Parent = this;
+            Left.Parent = this;
+        }
+
+        public override void SetParentRecursive()
+        {
+            SetParent();
+
+            Right.SetParentRecursive();
+            Left.SetParentRecursive();
+        }
+
         public BoundExpression Left { get; set; }
         public BoundKind Operator { get; set; }
         public BoundExpression Right { get; set; }
-
     }
 }

@@ -5,7 +5,11 @@ namespace JiteLang.Main.LangParser.SyntaxNodes
 {
     internal abstract class SyntaxNode : Parented<SyntaxNode>
     {
-        public SyntaxNode(SyntaxNode parent) : base(parent)
+        public SyntaxNode() : base()
+        {
+        }
+
+        public SyntaxNode(SyntaxNode? parent) : base(parent)
         {
         }
 

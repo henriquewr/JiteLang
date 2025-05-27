@@ -27,15 +27,15 @@ namespace JiteLang.Main.Shared.Type
 
         public static bool IsEqualsNotError(TypeSymbol? x, TypeSymbol? y)
         {
-            var isSame = x?.Text == y?.Text;
-            var isSameNotNone = isSame && x?.Text != ErrorTypeSymbol.Instance.Text;
+            var isSame = x?.FullText == y?.FullText;
+            var isSameNotNone = isSame && x?.FullText != ErrorTypeSymbol.Instance.FullText;
 
             return isSameNotNone;
         }
 
         public bool Equals(TypeSymbol? other)
         {
-            return Text == other?.Text;
+            return FullText == other?.FullText;
         }
 
         public bool IsError()
@@ -53,7 +53,7 @@ namespace JiteLang.Main.Shared.Type
 
         public int GetHashCode(TypeSymbol obj)
         {
-            return obj?.Text?.GetHashCode() ?? 0;
+            return obj?.FullText?.GetHashCode() ?? 0;
         }
     }
 

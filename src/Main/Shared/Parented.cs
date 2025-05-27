@@ -3,10 +3,18 @@ namespace JiteLang.Main.Shared
 {
     internal abstract class Parented<TParent> where TParent : Parented<TParent>
     {
-        protected Parented(TParent parent)
+        protected Parented()
+        {
+        }
+
+        protected Parented(TParent? parent)
         {
             Parent = parent;
         }
+
+        public abstract void SetParent();
+        public abstract void SetParentRecursive();
+
 
         public TParent? Parent { get; set; }
 

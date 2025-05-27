@@ -1,4 +1,5 @@
 ﻿using JiteLang.Main.Bound.Expressions;
+using JiteLang.Main.Visitor.Type.Scope;
 
 namespace JiteLang.Main.Bound.Statements
 {
@@ -6,22 +7,30 @@ namespace JiteLang.Main.Bound.Statements
     {
         public override BoundKind Kind => BoundKind.WhileStatement;
 
-        public BoundWhileStatement(BoundNode parent,
+        public BoundWhileStatement(
+            BoundNode? parent,
             BoundExpression condition,
-            BoundBlockStatement<BoundNode> body) : base(parent)
+            BoundBlockStatement<BoundNode, TypeLocal> body) : base(parent)
         {
             Condition = condition;
             Body = body;
         }
 
-        public BoundWhileStatement(BoundNode parent,
-            BoundExpression condition) : base(parent)
+        public BoundExpression Condition { get; set; }
+        public BoundBlockStatement<BoundNode, TypeLocal> Body { get; set; }
+
+        public override void SetParent()
         {
-            Condition = condition;
-            Body = new(this);
+            Condition.Parent = this;
+            Body.Parent = this;
         }
 
-        public BoundExpression Condition { get; set; }
-        public BoundBlockStatement<BoundNode> Body { get; set; }
+        public override void SetParentRecursive()
+        {
+            SetParent();
+
+            Condition.SetParentRecursive();
+            Body.SetParentRecursive();
+        }
     }
 }

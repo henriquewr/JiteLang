@@ -22,10 +22,18 @@ namespace JiteLang.Main.PredefinedMethods
         public static readonly List<TypeSymbol> S_ParamsTypes = new() { PredefinedTypeSymbol.Int };
         public List<TypeSymbol> ParamsTypes => S_ParamsTypes;
 
-        public static EmitCallExpression Call(EmitNode parent, EmitExpression size)
+
+        public static readonly DelegateTypeSymbol S_Type = DelegateTypeSymbol.Generate(C_Name, S_ReturnType, S_ParamsTypes);
+        public DelegateTypeSymbol Type => S_Type;
+
+
+        public static EmitCallExpression Call(EmitNode? parent, EmitExpression size)
         {
-            EmitCallExpression call = new (parent, null!, new() { size });
-            call.Caller = new EmitIdentifierExpression(call, C_Name);
+            EmitCallExpression call = new(parent, null!, new(1) { size });
+            size.Parent = call;
+            call.Caller = new EmitIdentifierExpression(call, C_Name, S_Type);
+
+            call.SetParentRecursive();
 
             return call;
         }

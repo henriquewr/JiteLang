@@ -8,10 +8,11 @@ namespace JiteLang.Main.Emit.Tree.Expressions
     internal class EmitIdentifierExpression : EmitExpression
     {
         public override EmitKind Kind => EmitKind.IdentifierExpression;
-        public override TypeSymbol Type => GetLocal().Type;
-        public EmitIdentifierExpression(EmitNode parent, string text) : base(parent)
+        public override TypeSymbol Type { get; set; }
+        public EmitIdentifierExpression(EmitNode? parent, string text, TypeSymbol type) : base(parent)
         {
             Text = text;
+            Type = type;
         }
         public string Text { get; set; }
 
@@ -52,6 +53,14 @@ namespace JiteLang.Main.Emit.Tree.Expressions
             }
 
             return null;
+        }
+
+        public override void SetParent()
+        {
+        }
+
+        public override void SetParentRecursive()
+        {
         }
     }
 }

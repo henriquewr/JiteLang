@@ -5,11 +5,22 @@ namespace JiteLang.Main.Bound.Statements
     {
         public override BoundKind Kind => BoundKind.ElseStatement;
 
-        public BoundElseStatement(BoundNode parent, BoundStatement @else) : base(parent)
+        public BoundElseStatement(BoundNode? parent, BoundStatement @else) : base(parent)
         {
             Else = @else;
         }
 
         public BoundStatement Else { get; set; }
+
+        public override void SetParent()
+        {
+            Else.Parent = this;
+        }
+
+        public override void SetParentRecursive()
+        {
+            SetParent();
+            Else.SetParentRecursive();
+        }
     }
 }

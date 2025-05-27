@@ -6,17 +6,27 @@ namespace JiteLang.Main.Emit.Tree.Statements
     {
         public override EmitKind Kind => EmitKind.LabelStatement;
         private static ulong _labelCount = 0;
-        public EmitLabelStatement(EmitNode parent, string name) : base(parent)
+        public EmitLabelStatement(EmitNode? parent, string name) : base(parent)
         {
             Name = name;
         }
 
         public string Name { get; set; }
 
-        public static EmitLabelStatement Create(EmitNode parent, string name)
+        public static EmitLabelStatement Create(EmitNode? parent, string name)
         {
             name += Interlocked.Increment(ref _labelCount);
-            return new EmitLabelStatement(parent, name);
+            var emitLabel = new EmitLabelStatement(parent, name);
+            //emitLabel.SetParent(); // uncomment when SetParent does something
+            return emitLabel;
+        }
+
+        public override void SetParent()
+        {
+        }
+
+        public override void SetParentRecursive()
+        {
         }
     }
 }

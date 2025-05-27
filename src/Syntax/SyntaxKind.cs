@@ -170,7 +170,7 @@ namespace JiteLang.Syntax
         /// <summary><c> </c></summary>
         MethodDeclaration = 4003,
         /// <summary><c> </c></summary>
-        VariableDeclaration = 4004,
+        LocalDeclaration = 4004,
         /// <summary><c> </c></summary>
         ParameterDeclaration = 4005,
         /// <summary><c> </c></summary>

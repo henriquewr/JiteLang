@@ -6,11 +6,19 @@ namespace JiteLang.Main.Emit.Tree.Expressions
     {
         public override EmitKind Kind => EmitKind.UnaryExpression;
 
-        public override TypeSymbol Type { get; }
+        public override TypeSymbol Type { get; set; }
 
-        public EmitUnaryExpression(EmitNode parent, TypeSymbol type) : base(parent)
+        public EmitUnaryExpression(EmitNode? parent, TypeSymbol type) : base(parent)
         {
             Type = type;
+        }
+
+        public override void SetParent()
+        {
+        }
+
+        public override void SetParentRecursive()
+        {
         }
     }
 }

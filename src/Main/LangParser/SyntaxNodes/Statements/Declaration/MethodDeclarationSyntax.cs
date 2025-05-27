@@ -7,21 +7,20 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
 {
     internal class MethodDeclarationSyntax : DeclarationSyntax
     {
-        public MethodDeclarationSyntax(SyntaxNode parent, IdentifierExpressionSyntax identifier, TypeSyntax returnType, List<SyntaxToken> modifiers) : base(parent, identifier)
+        public override SyntaxKind Kind => SyntaxKind.MethodDeclaration;
+
+        public MethodDeclarationSyntax(IdentifierExpressionSyntax identifier, 
+            TypeSyntax returnType, 
+            BlockStatement<SyntaxNode> body, 
+            List<ParameterDeclarationSyntax> @params, 
+            List<SyntaxToken> modifiers) : base(identifier)
         {
             ReturnType = returnType;
             Modifiers = modifiers;
-            Params = new();
-            Body = new(this);
+            Params = @params;
+            Body = body;
         }
-
-        public MethodDeclarationSyntax(SyntaxNode parent, IdentifierExpressionSyntax identifier, TypeSyntax returnType) : this(parent, identifier, returnType, new())
-        {
-        } 
      
-
-        public override SyntaxKind Kind => SyntaxKind.MethodDeclaration;
-
         public TypeSyntax ReturnType { get; set; }
 
         public List<ParameterDeclarationSyntax> Params { get; set; }
@@ -29,5 +28,32 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
         public List<SyntaxToken> Modifiers { get; set; }
 
         public BlockStatement<SyntaxNode> Body { get; set; }
+
+
+        public override void SetParent()
+        {
+            Body.Parent = this;
+            Identifier.Parent = this;
+
+            foreach (var param in Params)
+            {
+                param.Parent = Body;
+            }
+        }
+
+        public override void SetParentRecursive()
+        {
+            Body.Parent = this;
+            Identifier.Parent = this;
+
+            Body.SetParentRecursive();
+            Identifier.SetParentRecursive();
+
+            foreach (var param in Params)
+            {
+                param.Parent = Body;
+                param.SetParentRecursive();
+            }
+        }
     }
 }

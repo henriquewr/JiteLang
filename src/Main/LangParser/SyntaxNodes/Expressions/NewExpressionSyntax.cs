@@ -8,7 +8,7 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.NewExpression;
 
-        public NewExpressionSyntax(SyntaxNode parent, TypeSyntax type, List<ExpressionSyntax> args) : base(parent)
+        public NewExpressionSyntax(TypeSyntax type, List<ExpressionSyntax> args) : base()
         {
             Type = type;
             Args = args;
@@ -16,5 +16,22 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
 
         public TypeSyntax Type { get; set; }
         public List<ExpressionSyntax> Args { get; set; }
+
+        public override void SetParent()
+        {
+            foreach (var arg in Args)
+            {
+                arg.Parent = this;
+            }
+        }
+
+        public override void SetParentRecursive()
+        {
+            foreach (var arg in Args)
+            {
+                arg.Parent = this;
+                arg.SetParentRecursive();
+            }
+        }
     }
 }

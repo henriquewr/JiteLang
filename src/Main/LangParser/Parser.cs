@@ -9,6 +9,7 @@ using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 using JiteLang.Main.LangParser.SyntaxTree;
+using JiteLang.Main.LangParser.Types;
 using JiteLang.Main.Shared;
 using JiteLang.Syntax;
 using JiteLang.Utilities;
@@ -118,111 +119,115 @@ namespace JiteLang.Main.LangParser
 
         public ParsedSyntaxTree Parse()
         {
-            var root = ParseNamespaceDeclaration(null);
+            var root = ParseNamespaceDeclaration();
 
             var parsedSyntaxTree = new ParsedSyntaxTree(_errors, root);
+
+            root.SetParentRecursive();
 
             return parsedSyntaxTree;
         }
 
-        private SyntaxNode ParseDefaultMembers(SyntaxNode parent, TokenInfo token)
+        private SyntaxNode ParseDefaultMembers(TokenInfo token)
         {
             switch (token.Kind)
             {
                 case SyntaxKind.IdentifierToken:
-                    return ParseAssignmentExprOrCallExprOrVarDeclaration(parent);
+                    return ParseAssignmentExprOrCallExprOrVarDeclaration();
 
                 case SyntaxKind.ReturnKeyword:
-                    return ParseReturn(parent);
+                    return ParseReturn();
                 case SyntaxKind.IfKeyword:
-                    return ParseIfStatement(parent);
+                    return ParseIfStatement();
 
                 case SyntaxKind.WhileKeyword:
-                    return ParseWhileStatement(parent);
+                    return ParseWhileStatement();
 
                 default:
-                    if (SyntaxFacts.IsPredefinedType(token.Kind))
-                    {
-                        return ParseVarDeclaration(parent);
-                    }
-                    _tokens.Advance();
+                    throw new NotImplementedException();
+                    // syntax error probably
+                    //if (SyntaxFacts.IsPredefinedType(token.Kind))
+                    //{
+                    //    return ParseFieldDeclaration();
+                    //}
+                    //_tokens.Advance();
                     break;
             }
 
             throw new UnreachableException();
         }
 
-        private BlockStatement<TResult> ParseBlockStatement<TResult>(SyntaxNode bodyParent, Func<SyntaxNode, TokenInfo, TResult> parseMembersFunc) where TResult : SyntaxNode
+        private BlockStatement<TResult> ParseBlockStatement<TResult>(Func<TokenInfo, TResult> parseMembersFunc) where TResult : SyntaxNode
         {
-            BlockStatement<TResult> blockStatement = new(bodyParent);
             Expect(SyntaxKind.OpenBraceToken, "Expected '{'");
+
+            var blockMembers = new List<TResult>();
 
             while (_tokens.Current.Kind != SyntaxKind.CloseBraceToken)
             {
-                var member = parseMembersFunc(blockStatement, _tokens.Current);
-                blockStatement.Members.Add(member);
+                var member = parseMembersFunc(_tokens.Current);
+                blockMembers.Add(member);
             }
 
             Expect(SyntaxKind.CloseBraceToken, "Expected '}'");
 
+            BlockStatement<TResult> blockStatement = new(blockMembers);
+
             return blockStatement;
         }
 
-        private NamespaceDeclarationSyntax ParseNamespaceDeclaration(SyntaxNode? parent)
+        private NamespaceDeclarationSyntax ParseNamespaceDeclaration()
         {
             _tokens.Advance();
             Expect(SyntaxKind.IdentifierToken, out var namespaceIdentifier, "Expected identifier name");
 
-            var identifier = SyntaxFactory.Identifier(null!, namespaceIdentifier);
-            identifier.Position = namespaceIdentifier.Position;
+            var body = ParseBlockStatement<ClassDeclarationSyntax>(ParseNamespaceMembers);
 
-            NamespaceDeclarationSyntax parsed = new(parent!, identifier);
-            identifier.Parent = parsed;
-            parsed.Body = ParseBlockStatement<ClassDeclarationSyntax>(parsed, ParseNamespaceMembers);
+            NamespaceDeclarationSyntax parsed = new(SyntaxFactory.Identifier(namespaceIdentifier), body);
 
             return parsed;
 
-
-            ClassDeclarationSyntax ParseNamespaceMembers(SyntaxNode parent, TokenInfo token)
+            ClassDeclarationSyntax ParseNamespaceMembers(TokenInfo token)
             {
                 switch (token.Kind)
                 {
                     case SyntaxKind.ClassKeyword:
-                        return ParseClassDeclaration(parent);
+                        return ParseClassDeclaration();
+                    default:
+                        throw new UnreachableException();
                 }
-
-                throw new UnreachableException();
             }
         }
 
-        private ClassDeclarationSyntax ParseClassDeclaration(SyntaxNode parent)
+        private ClassDeclarationSyntax ParseClassDeclaration()
         {
             _tokens.Advance();
             Expect(SyntaxKind.IdentifierToken, out var classIdentifier, "Expected identifier name");
 
-            var identifier = SyntaxFactory.Identifier(null!, classIdentifier);
-            ClassDeclarationSyntax parsed = new(parent, identifier);
-            identifier.Parent = parsed;
+            var classBody = ParseBlockStatement(ParseClassMembers);
 
-            parsed.Body = ParseBlockStatement(parsed, ParseClassMembers);
+            ClassDeclarationSyntax parsed = new(SyntaxFactory.Identifier(classIdentifier), classBody);
+
             return parsed;
 
-            SyntaxNode ParseClassMembers(SyntaxNode thisParent, TokenInfo token)
+            SyntaxNode ParseClassMembers(TokenInfo token)
             {
                 switch (token.Kind)
                 {
                     case SyntaxKind.PublicKeyword:
                     case SyntaxKind.PrivateKeyword:
-                        return ParseMethodOrFieldDeclaration(thisParent);
+                        return ParseMethodOrFieldDeclaration();
                     case SyntaxKind.ClassKeyword:
-                        return ParseClassDeclaration(thisParent);
+                        return ParseClassDeclaration();
 
                     default:
-                        if (SyntaxFacts.IsPredefinedType(token.Kind))
-                        {
-                            return ParseVarDeclaration(thisParent);
-                        }
-                        _tokens.Advance();
+                        throw new NotImplementedException();
+                        // syntax error probably
+                        //if (SyntaxFacts.IsPredefinedType(token.Kind))
+                        //{
+                        //    return ParseFieldDeclaration();
+                        //}
+                        //_tokens.Advance();
                         break;
                 }
 
@@ -245,54 +250,56 @@ namespace JiteLang.Main.LangParser
             return modifiers;
         }
 
-        private SyntaxNode ParseMethodOrFieldDeclaration(SyntaxNode parent)
+        private SyntaxNode ParseMethodOrFieldDeclaration()
         {
             var modifiers = ParseModifiers();
             _tokens.PeekNext(out var token, 2);
 
-
-            if(token.Kind == SyntaxKind.OpenParenToken)
+            if (token.Kind == SyntaxKind.OpenParenToken)
             {
-                var methodDeclaration = ParseMethodDeclaration(parent, modifiers);
+                var methodDeclaration = ParseMethodDeclaration(modifiers);
                 return methodDeclaration;
             }
             else
             {
-                var varDeclaration = ParseVarDeclaration(null!);
-                FieldDeclarationSyntax fieldDeclaration = new(parent, varDeclaration, modifiers);
-                varDeclaration.Parent = fieldDeclaration;
+                var variable = ParseVariableDeclaration();
+
+                var fieldDeclaration = new FieldDeclarationSyntax(modifiers, SyntaxFactory.Identifier(variable.IdentifierToken), SyntaxFactory.Type(variable.TypeToken), variable.InitialValue);
 
                 return fieldDeclaration;
             }
         }
 
-        private MethodDeclarationSyntax ParseMethodDeclaration(SyntaxNode parent, List<SyntaxToken> modifiers)
+        private MethodDeclarationSyntax ParseMethodDeclaration(List<SyntaxToken> modifiers)
         {
             _tokens.Advance(out var returnType);
             Expect(SyntaxKind.IdentifierToken, out var methodIdentifier, "Expected identifier name");
 
             var returnTypeSyntax = SyntaxFactory.Type(returnType);
-            var identifier = SyntaxFactory.Identifier(null!, methodIdentifier);
-            MethodDeclarationSyntax methodDeclaration = new(parent, identifier, returnTypeSyntax, modifiers);
-            identifier.Parent = methodDeclaration;
+            var identifier = SyntaxFactory.Identifier(methodIdentifier);
 
-            methodDeclaration.Params = ParseMethodParams(methodDeclaration);
+            var methodParams = ParseMethodParams();
 
-            var isExtern = methodDeclaration.Modifiers.Any(x => x.Kind == SyntaxKind.ExternKeyword);
+            var isExtern = modifiers.Any(x => x.Kind == SyntaxKind.ExternKeyword);
+
+            BlockStatement<SyntaxNode> methodBody;
 
             if (isExtern) //Extern methods cannot have a body
             {
+                methodBody = new(new());
                 Expect(SyntaxKind.SemiColon, "Extern method declaration must end with semicolon");
             }
             else
             {
-                methodDeclaration.Body = ParseBlockStatement<SyntaxNode>(methodDeclaration, ParseDefaultMembers);
+                methodBody = ParseBlockStatement<SyntaxNode>(ParseDefaultMembers);
             }
+
+            MethodDeclarationSyntax methodDeclaration = new(identifier, returnTypeSyntax, methodBody, methodParams, modifiers);
 
             return methodDeclaration;
         }
 
-        private List<TItem> ParseParenthesisExpr<TItem>(SyntaxNode parent, Func<SyntaxNode, TItem> parseItemFunc)
+        private List<TItem> ParseParenthesisExpr<TItem>(Func<TItem> parseItemFunc)
         {
             Expect(SyntaxKind.OpenParenToken, "Expected '('");
 
@@ -300,7 +307,7 @@ namespace JiteLang.Main.LangParser
 
             while (_tokens.Current.Kind != SyntaxKind.CloseParenToken)
             {
-                var item = parseItemFunc(parent);
+                var item = parseItemFunc();
                 items.Add(item);
             }
 
@@ -309,23 +316,22 @@ namespace JiteLang.Main.LangParser
             return items;
         }
 
-        private List<ParameterDeclarationSyntax> ParseMethodParams(SyntaxNode parent)
+        private List<ParameterDeclarationSyntax> ParseMethodParams()
         {
-            var @params = ParseParenthesisExpr(parent, ParseParam);
+            var @params = ParseParenthesisExpr(ParseParam);
 
             return @params;
 
-            ParameterDeclarationSyntax ParseParam(SyntaxNode thisParent)
+            ParameterDeclarationSyntax ParseParam()
             {
                 _tokens.Advance(out var token);
 
                 Expect(SyntaxKind.IdentifierToken, out var identifier, "Expected identifier name");
 
-                var ideToken = SyntaxFactory.Identifier(null!, identifier);
+                var ideToken = SyntaxFactory.Identifier(identifier);
                 var type = SyntaxFactory.Type(token);
 
-                var paramDeclaration = new ParameterDeclarationSyntax(thisParent, ideToken, type);
-                ideToken.Parent = paramDeclaration;
+                var paramDeclaration = new ParameterDeclarationSyntax(ideToken, type);
 
                 if (_tokens.Current.Kind == SyntaxKind.CommaToken)
                 {
@@ -336,111 +342,123 @@ namespace JiteLang.Main.LangParser
             }
         }
 
-        private IfStatementSyntax ParseIfStatement(SyntaxNode parent) 
+        private IfStatementSyntax ParseIfStatement() 
         {
             _tokens.Advance();
 
             Expect(SyntaxKind.OpenParenToken, "Expected '('");
-            var condition = ParseExpr(null!);
+            var condition = ParseExpr();
             Expect(SyntaxKind.CloseParenToken, "Expected ')'");
 
-            var ifStmt = new IfStatementSyntax(parent, condition);
-            ifStmt.Body = ParseBlockStatement<SyntaxNode>(ifStmt, ParseDefaultMembers);
-            condition.Parent = ifStmt;
+            var ifBody = ParseBlockStatement<SyntaxNode>(ParseDefaultMembers);
 
-            ifStmt.Else = TryParseElseStatement(parent);
+            var ifStmtElse = TryParseElseStatement();
+
+            var ifStmt = new IfStatementSyntax(condition, ifBody, ifStmtElse);
 
             return ifStmt;
 
-            ElseStatementSyntax? TryParseElseStatement(SyntaxNode parent)
+            ElseStatementSyntax? TryParseElseStatement()
             {
                 if (_tokens.Current.Kind == SyntaxKind.ElseKeyword)
                 {
                     _tokens.Advance();
 
-                    return ParseElseStatement(parent);
+                    return ParseElseStatement();
                 }
 
                 return null;
             }
         }
 
-        private ElseStatementSyntax ParseElseStatement(SyntaxNode parent)
+        private ElseStatementSyntax ParseElseStatement()
         {
-            var elseStmt = new ElseStatementSyntax(parent, null!);
+            StatementSyntax @else;
 
             if (_tokens.Current.Kind == SyntaxKind.IfKeyword)
             {
-                elseStmt.Else = ParseIfStatement(parent);
+                @else = ParseIfStatement();
             }
             else
             {
-                elseStmt.Else = ParseBlockStatement<SyntaxNode>(parent, ParseDefaultMembers);
+                @else = ParseBlockStatement<SyntaxNode>(ParseDefaultMembers);
             }
+
+            var elseStmt = new ElseStatementSyntax(@else);
 
             return elseStmt;
         }
 
-        private WhileStatementSyntax ParseWhileStatement(SyntaxNode parent)
+        private WhileStatementSyntax ParseWhileStatement()
         {
             _tokens.Advance();
 
             Expect(SyntaxKind.OpenParenToken, "Expected '('");
-            var condition = ParseExpr(null!);
+            var condition = ParseExpr();
             Expect(SyntaxKind.CloseParenToken, "Expected ')'");
 
-            var whileStmt = new WhileStatementSyntax(parent, condition);
-            condition.Parent = whileStmt;
+            var body = ParseBlockStatement<SyntaxNode>(ParseDefaultMembers);
 
-            whileStmt.Body = ParseBlockStatement<SyntaxNode>(whileStmt, ParseDefaultMembers);
+            var whileStmt = new WhileStatementSyntax(condition, body);
 
             return whileStmt;
         }
 
-        private ReturnStatementSyntax ParseReturn(SyntaxNode parent)
+        private ReturnStatementSyntax ParseReturn()
         {
             _tokens.Advance(out var retToken);
 
-            var returnStmp = new ReturnStatementSyntax(parent)
-            {
-                Position = retToken.Position
-            };
+            ExpressionSyntax? returnValue = null;
 
             if (_tokens.Current.Kind != SyntaxKind.SemiColon)
             {
-                returnStmp.ReturnValue = ParseExpr(returnStmp);
+                returnValue = ParseExpr();
             }
 
             Expect(SyntaxKind.SemiColon, "Expected semicolon");
 
+            var returnStmp = new ReturnStatementSyntax(returnValue)
+            {
+                Position = retToken.Position
+            };
+
             return returnStmp;
         }
 
-        private VariableDeclarationSyntax ParseVarDeclaration(SyntaxNode parent)
+        private LocalDeclarationSyntax ParseLocalDeclaration()
+        {
+            var variable = ParseVariableDeclaration();
+
+            var localDeclaration = new LocalDeclarationSyntax(SyntaxFactory.Identifier(variable.IdentifierToken), SyntaxFactory.Type(variable.TypeToken), variable.InitialValue);
+
+            return localDeclaration;
+        }
+
+        private (TokenInfo IdentifierToken, TokenInfo TypeToken, ExpressionSyntax? InitialValue) ParseVariableDeclaration()
         {
             _tokens.Advance(out var token);
 
             Expect(SyntaxKind.IdentifierToken, out var identifier, "Expected identifier name");
 
-            var ideToken = SyntaxFactory.Identifier(null!, identifier);
-            var varDeclaration = SyntaxFactory.DeclareVariable(token, parent, ideToken);
-            if (_tokens.Current.Kind == SyntaxKind.SemiColon) 
+            (TokenInfo IdentifierToken, TokenInfo TypeToken, ExpressionSyntax? InitialValue) result = (identifier, token, null);
+
+            if (_tokens.Current.Kind == SyntaxKind.SemiColon)
             {
                 _tokens.Advance();
                 //No value
-                return varDeclaration;
+                return result;
             }
 
             Expect(SyntaxKind.EqualsToken, out _, "Expected equals token following identifier in variable declaration");
 
-            varDeclaration.InitialValue = ParseExpr(varDeclaration);
+            result.InitialValue = ParseExpr();
 
             Expect(SyntaxKind.SemiColon, "Expected semicolon");
 
-            return varDeclaration;
+            return result;
         }
 
-        private SyntaxNode ParseAssignmentExprOrCallExprOrVarDeclaration(SyntaxNode parent)
+        private SyntaxNode ParseAssignmentExprOrCallExprOrVarDeclaration()
         {
             _tokens.PeekNext(out var nextToken);
 
@@ -452,7 +470,7 @@ namespace JiteLang.Main.LangParser
                         Method()
                        */
 
-                    return ParseWithSemicolon(() => ParseCallExpression(parent));
+                    return ParseWithSemicolon(ParseCallExpression);
 
                 case SyntaxKind.IdentifierToken:
                     /*
@@ -460,7 +478,7 @@ namespace JiteLang.Main.LangParser
                         UserType variable ...
                        */
 
-                    return ParseVarDeclaration(parent);
+                    return ParseLocalDeclaration();
 
                 case SyntaxKind.DotToken:
                     /*
@@ -472,11 +490,11 @@ namespace JiteLang.Main.LangParser
 
                     if (lastToken.Kind == SyntaxKind.OpenParenToken)
                     {
-                        return ParseWithSemicolon(() => ParseCallExpression(parent));
+                        return ParseWithSemicolon(ParseCallExpression);
                     }
                     else if (SyntaxFacts.IsAssignmentOperator(lastToken.Kind))
                     {
-                        return ParseWithSemicolon(() => ParseAssignmentExpr(parent));
+                        return ParseWithSemicolon(ParseAssignmentExpr);
                     }
 
                     throw new UnreachableException();
@@ -491,7 +509,7 @@ namespace JiteLang.Main.LangParser
                         variable = ...
                       */
 
-                    return ParseWithSemicolon(() => ParseAssignmentExpr(parent));
+                    return ParseWithSemicolon(ParseAssignmentExpr);
             }
 
             SyntaxNode ParseWithSemicolon(Func<SyntaxNode> func)
@@ -503,108 +521,98 @@ namespace JiteLang.Main.LangParser
         }
 
         #region Expressions
-        private ExpressionSyntax ParseExpr(SyntaxNode parent) 
+        private ExpressionSyntax ParseExpr() 
         {
-            var parsed = ParseLogicalOrExpr(parent);
+            var parsed = ParseLogicalOrExpr();
             return parsed;
         }
 
-        private ExpressionSyntax ParseAssignmentExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseAssignmentExpr()
         {
-            var assignment = new AssignmentExpressionSyntax(parent, null!, default, null!);
-
-            var left = ParsePrimaryExpr(assignment);
+            var left = ParsePrimaryExpr();
 
             Expect(currentToken => {
                 return SyntaxFacts.IsAssignmentOperator(currentToken.Kind);
             }, out var operationToken, "Expected assignment operator");
 
-            var value = ParseExpr(assignment);
+            var value = ParseExpr();
 
-            assignment.Left = left;
-            assignment.Operator = operationToken.Kind;
-            assignment.Right = value;
+            var assignment = new AssignmentExpressionSyntax(left, operationToken.Kind, value);
 
             return assignment;
         }
 
-        private ExpressionSyntax ParseLogicalOrExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseLogicalOrExpr()
         {
             return ParseLogicalLeftExpr(currentKind =>
                 currentKind == SyntaxKind.BarBarToken,
-            parent,
             ParseLogicalAndExpr);
         }
 
-        private ExpressionSyntax ParseLogicalAndExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseLogicalAndExpr()
         {
             return ParseLogicalLeftExpr(currentKind =>
                 currentKind == SyntaxKind.AmpersandAmpersandToken,
-            parent,
             ParseBitwiseOrExpr);
         }
 
-        private ExpressionSyntax ParseBitwiseOrExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseBitwiseOrExpr()
         {
-            return ParseBitwiseXorExpr(parent);
+            return ParseBitwiseXorExpr();
         }
 
-        private ExpressionSyntax ParseBitwiseXorExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseBitwiseXorExpr()
         {
-            return ParseBitwiseAndExpr(parent);
+            return ParseBitwiseAndExpr();
         }
 
-        private ExpressionSyntax ParseBitwiseAndExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseBitwiseAndExpr()
         {
-            return ParseEqualityExpr(parent);
+            return ParseEqualityExpr();
         }
 
-        private ExpressionSyntax ParseEqualityExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseEqualityExpr()
         {
             var result = ParseLogicalLeftExpr(currentKind =>
                 currentKind == SyntaxKind.EqualsEqualsToken || 
                 currentKind == SyntaxKind.NotEqualsToken,
-            parent,
             ParseRelationalExpr);
             return result;
         }
 
-        private ExpressionSyntax ParseRelationalExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseRelationalExpr()
         {
             return ParseLogicalLeftExpr(currentKind => 
                 currentKind == SyntaxKind.GreaterThanToken || 
                 currentKind == SyntaxKind.GreaterThanEqualsToken || 
                 currentKind == SyntaxKind.LessThanToken || 
                 currentKind == SyntaxKind.LessThanEqualsToken,
-            parent,
             ParseBitwiseShiftExpr);
         }
 
-        private ExpressionSyntax ParseBitwiseShiftExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseBitwiseShiftExpr()
         {
-            return ParseAdditiveExpr(parent);
+            return ParseAdditiveExpr();
         }
 
-        private ExpressionSyntax ParseAdditiveExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseAdditiveExpr()
         {
             return ParseBinaryLeftExpr(currentKind => 
                 currentKind == SyntaxKind.PlusToken || 
                 currentKind == SyntaxKind.MinusToken,
-            parent,
             ParseMultiplicativeExpr);
         }
 
-        private ExpressionSyntax ParseMultiplicativeExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseMultiplicativeExpr()
         {
             return ParseBinaryLeftExpr(currentKind =>
                 currentKind == SyntaxKind.AsteriskToken ||
                 currentKind == SyntaxKind.SlashToken ||
                 currentKind == SyntaxKind.PercentToken,
-            parent,
             ParseUnaryOrCastExpr);
         }
 
-        private ExpressionSyntax ParseUnaryOrCastExpr(SyntaxNode parent)
+        private ExpressionSyntax ParseUnaryOrCastExpr()
         {
             if (_tokens.Current.Kind == SyntaxKind.OpenParenToken) 
             {
@@ -617,27 +625,27 @@ namespace JiteLang.Main.LangParser
                     _tokens.Advance();
                     Expect(SyntaxKind.CloseParenToken, "Expected ')'");
 
-                    var castExpr = new CastExpressionSyntax(parent, null!, type);
-                    castExpr.Value = ParseUnaryOrCastExpr(castExpr);
+                    var castExprValue = ParseUnaryOrCastExpr();
+                    var castExpr = new CastExpressionSyntax(castExprValue, type);
 
                     return castExpr;
                 }
             }
 
-            var expr = ParseCallExpression(parent);
+            var expr = ParseCallExpression();
             return expr;
         }
 
-        private ExpressionSyntax ParseCallExpression(SyntaxNode parent)
+        private ExpressionSyntax ParseCallExpression()
         {
-            var possibleCaller = ParsePrimaryExpr(parent);
+            var possibleCaller = ParsePrimaryExpr();
             if (_tokens.Current.Kind == SyntaxKind.OpenParenToken)
             {
                 _tokens.Advance(out var openParenToken);
 
-                var callExpr = new CallExpressionSyntax(parent, possibleCaller);
-                possibleCaller.Parent = callExpr;
-                callExpr.Args = ParseArgs(callExpr);
+                var args = ParseArgs();
+
+                var callExpr = new CallExpressionSyntax(possibleCaller, args);
 
                 Expect(SyntaxKind.CloseParenToken, "Expected ')'");
 
@@ -647,7 +655,7 @@ namespace JiteLang.Main.LangParser
             //isnt a caller
             return possibleCaller;
 
-            List<ExpressionSyntax> ParseArgs(SyntaxNode thisParent)
+            List<ExpressionSyntax> ParseArgs()
             {
                 var args = new List<ExpressionSyntax>();
 
@@ -657,12 +665,12 @@ namespace JiteLang.Main.LangParser
                     return args;
                 }
 
-                args.Add(ParseExpr(thisParent));
+                args.Add(ParseExpr());
 
                 while (_tokens.Current.Kind == SyntaxKind.CommaToken)
                 {
                     _tokens.Advance();
-                    var parsed = ParseExpr(thisParent);
+                    var parsed = ParseExpr();
                     args.Add(parsed);
                 }
 
@@ -670,33 +678,30 @@ namespace JiteLang.Main.LangParser
             }
         }
 
-        private ExpressionSyntax ParseMemberExpression(SyntaxNode parent, ExpressionSyntax leftExpr)
+        private ExpressionSyntax ParseMemberExpression(ExpressionSyntax leftExpr)
         {
             while(_tokens.Current.Kind == SyntaxKind.DotToken)
             {
                 _tokens.Advance();
                 Expect(SyntaxKind.IdentifierToken, out var identifierToken, "Expected identifier");
 
-                var rightExpr = SyntaxFactory.Identifier(null!, identifierToken);
+                var rightExpr = SyntaxFactory.Identifier(identifierToken);
 
-                leftExpr = new MemberExpressionSyntax(parent, leftExpr, rightExpr);
-                rightExpr.Parent = leftExpr;
-
-                parent = leftExpr;
+                leftExpr = new MemberExpressionSyntax(leftExpr, rightExpr);
             }
 
             return leftExpr;
         }
 
-        private ExpressionSyntax ParseLogicalLeftExpr(Func<SyntaxKind, bool> willAdvance, SyntaxNode parent, Func<SyntaxNode, ExpressionSyntax> getData, [CallerMemberName] string callerForDebugView = "doNotUse")
+        private ExpressionSyntax ParseLogicalLeftExpr(Func<SyntaxKind, bool> willAdvance, Func<ExpressionSyntax> getData, [CallerMemberName] string callerForDebugView = "doNotUse")
         {
-            var left = getData(parent);
+            var left = getData();
 
             while (willAdvance(_tokens.Current.Kind))
             {
                 _tokens.Advance(out var operationToken);
-                var right = getData(parent);
-                left = new LogicalExpressionSyntax(parent, left, Convert(operationToken.Kind), right);
+                var right = getData();
+                left = new LogicalExpressionSyntax(left, Convert(operationToken.Kind), right);
             }
 
             return left;
@@ -722,15 +727,15 @@ namespace JiteLang.Main.LangParser
             }
         }
 
-        private ExpressionSyntax ParseBinaryLeftExpr(Func<SyntaxKind, bool> willAdvance, SyntaxNode parent, Func<SyntaxNode, ExpressionSyntax> getData, [CallerMemberName] string callerForDebugView = "doNotUse")
+        private ExpressionSyntax ParseBinaryLeftExpr(Func<SyntaxKind, bool> willAdvance, Func<ExpressionSyntax> getData, [CallerMemberName] string callerForDebugView = "doNotUse")
         {
-            var left = getData(parent);
+            var left = getData();
 
             while (willAdvance(_tokens.Current.Kind))
             {
                 _tokens.Advance(out var operationToken);
-                var right = getData(parent);
-                left = new BinaryExpressionSyntax(parent, left, Convert(operationToken.Kind), right);
+                var right = getData();
+                left = new BinaryExpressionSyntax(left, Convert(operationToken.Kind), right);
             }
 
             return left;
@@ -750,7 +755,7 @@ namespace JiteLang.Main.LangParser
             }
         }
 
-        private NewExpressionSyntax ParseNewExpr(SyntaxNode parent)
+        private NewExpressionSyntax ParseNewExpr()
         {
             _tokens.Advance(out var typeToken);
 
@@ -758,15 +763,14 @@ namespace JiteLang.Main.LangParser
 
             Expect(SyntaxKind.OpenParenToken, "Expected '('");
 
-            var newExpr = new NewExpressionSyntax(parent, type, null!);
-
-            newExpr.Args = ParseArgs(newExpr);
+            var args = ParseArgs();
+            var newExpr = new NewExpressionSyntax(type, args);
 
             Expect(SyntaxKind.CloseParenToken, "Expected ')'");
 
             return newExpr;
             
-            List<ExpressionSyntax> ParseArgs(SyntaxNode parent)
+            List<ExpressionSyntax> ParseArgs()
             {
                 List<ExpressionSyntax> args = new();
 
@@ -776,12 +780,12 @@ namespace JiteLang.Main.LangParser
                     return args;
                 }
 
-                args.Add(ParseExpr(parent));
+                args.Add(ParseExpr());
 
                 while (_tokens.Current.Kind == SyntaxKind.CommaToken)
                 {
                     _tokens.Advance();
-                    var parsed = ParseExpr(parent);
+                    var parsed = ParseExpr();
                     args.Add(parsed);
                 }
 
@@ -789,7 +793,7 @@ namespace JiteLang.Main.LangParser
             }
         }
 
-        private ExpressionSyntax ParsePrimaryExpr(SyntaxNode parent)
+        private ExpressionSyntax ParsePrimaryExpr()
         {
             _tokens.Advance(out var currentToken);
 
@@ -797,34 +801,32 @@ namespace JiteLang.Main.LangParser
             {
                 case SyntaxKind.IdentifierToken:
                 {
-                    var identifier = SyntaxFactory.Identifier(null!, currentToken);
+                    var identifier = SyntaxFactory.Identifier(currentToken);
 
                     if (_tokens.Current.Kind == SyntaxKind.DotToken)
                     {
-                        var memberExpr = ParseMemberExpression(parent, identifier);
-                        identifier.Parent = memberExpr;
+                        var memberExpr = ParseMemberExpression(identifier);
                         return memberExpr;
                     }
 
-                    identifier.Parent = parent;
                     return identifier;
                 }
 
                 case SyntaxKind.NewKeyword:
-                    return ParseNewExpr(parent);
+                    return ParseNewExpr();
 
                 case SyntaxKind.OpenParenToken:
-                    var value = ParseExpr(parent);
+                    var value = ParseExpr();
                     Expect(SyntaxKind.CloseParenToken, "Expected ')'");
                     return value;
 
                 default:
                     var token = SyntaxFactory.TokenWithValue(currentToken);
-                    var literalExpr = SyntaxFactory.LiteralExpression(parent, token);
+                    var literalExpr = SyntaxFactory.LiteralExpression(token);
                     return literalExpr;
             }
         }
 
-#endregion Expressions
+        #endregion Expressions
     }
 }
