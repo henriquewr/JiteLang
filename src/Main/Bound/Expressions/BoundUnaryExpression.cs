@@ -13,13 +13,5 @@ namespace JiteLang.Main.Bound.Expressions
         {
             Type = type;
         }
-
-        public override void SetParent()
-        {
-        }
-
-        public override void SetParentRecursive()
-        {
-        }
     }
 }

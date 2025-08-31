@@ -33,8 +33,6 @@ namespace JiteLang.Main.PredefinedMethods
             size.Parent = call;
             call.Caller = new EmitIdentifierExpression(call, C_Name, S_Type);
 
-            call.SetParentRecursive();
-
             return call;
         }
 
@@ -50,7 +48,6 @@ namespace JiteLang.Main.PredefinedMethods
                 asmBuilder.Label(new Operand(C_Name)),
                 asmBuilder.Push(Operand.Rbp),
                 asmBuilder.Mov(Operand.Rbp, Operand.Rsp),
-                asmBuilder.Sub(Operand.Rsp, new Operand(16)),
             };
 
             instructions.AddRange(asmBuilderAbs.AllocateReadWriteMemory(new Operand("[rbp + 16]")));

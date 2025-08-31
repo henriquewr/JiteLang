@@ -19,6 +19,7 @@ namespace JiteLang.Main.Bound
         IfStatement,
         ElseStatement,
         WhileStatement,
+        ForStatement,
         LabelStatement,
 
 

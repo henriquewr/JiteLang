@@ -7,31 +7,18 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
     {
         public override SyntaxKind Kind => SyntaxKind.ReturnStatement;
 
-        public ReturnStatementSyntax() : base()
-        {
-        }
-
         public ReturnStatementSyntax(ExpressionSyntax? returnValue = null) : base()
         {
             ReturnValue = returnValue;
         }
 
-        public ExpressionSyntax? ReturnValue { get; set; }
-
-        public override void SetParent()
+        public ExpressionSyntax? ReturnValue
         {
-            if (ReturnValue is not null) 
+            get;
+            set
             {
-                ReturnValue.Parent = this;
-            }
-        }
-
-        public override void SetParentRecursive()
-        {
-            if (ReturnValue is not null)
-            {
-                ReturnValue.Parent = this;
-                ReturnValue.SetParentRecursive();
+                field = value;
+                field?.Parent = this;
             }
         }
     }

@@ -18,34 +18,33 @@ namespace JiteLang.Main.Bound.Statements
             Else = @else;
         }
 
-        public BoundExpression Condition { get; set; }
-        public BoundBlockStatement<BoundNode, TypeLocal> Body { get; set; }
-        public BoundElseStatement? Else { get; set; }
-
-
-        public override void SetParent()
+        public BoundExpression Condition
         {
-            Condition.Parent = this;
-            Body.Parent = this;
-
-            if (Else is not null)
+            get;
+            set
             {
-                Else.Parent = this;
+                field = value;
+                field?.Parent = this;
             }
         }
 
-        public override void SetParentRecursive()
+        public BoundBlockStatement<BoundNode, TypeLocal> Body
         {
-            Condition.Parent = this;
-            Condition.SetParentRecursive();
-
-            Body.Parent = this;
-            Body.SetParentRecursive();
-
-            if (Else is not null)
+            get;
+            set
             {
-                Else.Parent = this;
-                Else.SetParentRecursive();
+                field = value;
+                field?.Parent = this;
+            }
+        }
+
+        public BoundElseStatement? Else
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
             }
         }
     }

@@ -13,18 +13,16 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
             ToType = toType;
         }
 
-        public ExpressionSyntax Value { get; set; }
+        public ExpressionSyntax Value
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
+
         public TypeSyntax ToType { get; set; }
-
-        public override void SetParent()
-        {
-            Value.Parent = this;
-        }
-
-        public override void SetParentRecursive()
-        {
-            Value.Parent = this;
-            Value.SetParentRecursive();
-        }
     }
 }

@@ -1,6 +1,7 @@
-﻿using JiteLang.Main.Shared.Type;
+﻿using JiteLang.Main.Bound.Expressions;
+using JiteLang.Main.Shared.Type;
+using JiteLang.Utilities;
 using System;
-using System.Collections.Generic;
 
 namespace JiteLang.Main.Emit.Tree.Expressions
 {
@@ -19,33 +20,42 @@ namespace JiteLang.Main.Emit.Tree.Expressions
             }
         }
 
-        public EmitCallExpression(EmitNode? parent, EmitExpression caller, List<EmitExpression> args) : base(parent)
+        public EmitCallExpression(EmitNode? parent, EmitExpression caller, NotifyAddList<EmitExpression> args) : base(parent)
         {
             Caller = caller;
             Args = args;
         }
 
-        public EmitExpression Caller { get; set; }
-        public List<EmitExpression> Args { get; set; }
-
-        public override void SetParent()
+        public EmitExpression Caller
         {
-            Caller.Parent = this;
-
-            foreach (var arg in Args)
+            get;
+            set
             {
-                arg.Parent = this;
+                field = value;
+                field?.Parent = this;
             }
         }
-        public override void SetParentRecursive()
+        protected void OnAdd(EmitExpression item)
         {
-            Caller.Parent = this;
-            Caller.SetParentRecursive();
-
-            foreach (var arg in Args)
+            item.Parent = this;
+        }
+        public NotifyAddList<EmitExpression> Args
+        {
+            get;
+            set
             {
-                arg.Parent = this;
-                arg.SetParentRecursive();
+                field?.OnAdd -= OnAdd;
+                field = value;
+
+                if (field is not null)
+                {
+                    field.OnAdd += OnAdd;
+
+                    foreach (var member in Args)
+                    {
+                        OnAdd(member);
+                    }
+                }
             }
         }
     }

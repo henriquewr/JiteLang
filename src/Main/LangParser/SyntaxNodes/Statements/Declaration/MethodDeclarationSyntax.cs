@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
-using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
+﻿using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
 using JiteLang.Main.LangParser.Types;
 using JiteLang.Syntax;
+using JiteLang.Utilities;
+using System.Collections.Generic;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
 {
@@ -12,47 +13,69 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
         public MethodDeclarationSyntax(IdentifierExpressionSyntax identifier, 
             TypeSyntax returnType, 
             BlockStatement<SyntaxNode> body, 
-            List<ParameterDeclarationSyntax> @params, 
+            IEnumerable<ParameterDeclarationSyntax> @params, 
             List<SyntaxToken> modifiers) : base(identifier)
         {
+            Identifier = identifier;
             ReturnType = returnType;
             Modifiers = modifiers;
-            Params = @params;
+            Params = new(@params);
             Body = body;
         }
      
         public TypeSyntax ReturnType { get; set; }
 
-        public List<ParameterDeclarationSyntax> Params { get; set; }
-
-        public List<SyntaxToken> Modifiers { get; set; }
-
-        public BlockStatement<SyntaxNode> Body { get; set; }
-
-
-        public override void SetParent()
+        protected void OnAdd(ParameterDeclarationSyntax item)
         {
-            Body.Parent = this;
-            Identifier.Parent = this;
-
-            foreach (var param in Params)
+            item.Parent = Body;
+        }
+        public NotifyAddList<ParameterDeclarationSyntax> Params
+        {
+            get;
+            set
             {
-                param.Parent = Body;
+                field?.OnAdd -= OnAdd;
+                field = value;
+
+                if (field is not null)
+                {
+                    field.OnAdd += OnAdd;
+
+                    foreach (var member in Params)
+                    {
+                        OnAdd(member);
+                    }
+                }
             }
         }
 
-        public override void SetParentRecursive()
+        public List<SyntaxToken> Modifiers { get; set; }
+
+        public BlockStatement<SyntaxNode> Body
         {
-            Body.Parent = this;
-            Identifier.Parent = this;
-
-            Body.SetParentRecursive();
-            Identifier.SetParentRecursive();
-
-            foreach (var param in Params)
+            get;
+            set
             {
-                param.Parent = Body;
-                param.SetParentRecursive();
+                field = value;
+                field?.Parent = this;
+
+                if (Params is not null)
+                {
+                    foreach (var param in Params)
+                    {
+                        OnAdd(param);
+                    }
+                }
+            }
+        }
+
+        public override IdentifierExpressionSyntax Identifier
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
             }
         }
     }

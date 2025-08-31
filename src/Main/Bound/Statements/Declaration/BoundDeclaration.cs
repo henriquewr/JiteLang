@@ -4,11 +4,10 @@ namespace JiteLang.Main.Bound.Statements.Declaration
 {
     internal abstract class BoundDeclaration : BoundStatement
     {
-        public BoundDeclaration(BoundNode? parent, BoundIdentifierExpression identifier) : base(parent)
+        public BoundDeclaration(BoundNode? parent) : base(parent)
         {
-            Identifier = identifier; 
         }
 
-        public BoundIdentifierExpression Identifier { get; set; }
+        public abstract BoundIdentifierExpression Identifier { get; set; }
     }
 }

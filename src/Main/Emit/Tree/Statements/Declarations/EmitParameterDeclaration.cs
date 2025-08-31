@@ -7,13 +7,5 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
         public EmitParameterDeclaration(EmitNode? parent, string name) : base(parent, name)
         {
         }
-
-        public override void SetParent()
-        {
-        }
-
-        public override void SetParentRecursive()
-        {
-        }
     }
 }

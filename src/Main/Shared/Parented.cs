@@ -12,10 +12,6 @@ namespace JiteLang.Main.Shared
             Parent = parent;
         }
 
-        public abstract void SetParent();
-        public abstract void SetParentRecursive();
-
-
         public TParent? Parent { get; set; }
 
         public virtual T? GetFirstOrDefaultOfType<T>()

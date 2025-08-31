@@ -14,21 +14,23 @@ namespace JiteLang.Main.Bound.Expressions
             Type = type;
         }
 
-        public override void SetParent()
+        public BoundExpression Left
         {
-            Right.Parent = this;
-            Left.Parent = this;
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
-
-        public override void SetParentRecursive()
+        public BoundIdentifierExpression Right
         {
-            SetParent();
-
-            Right.SetParentRecursive();
-            Left.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
-
-        public BoundExpression Left { get; set; }
-        public BoundIdentifierExpression Right { get; set; }
     }
 }

@@ -16,22 +16,23 @@ namespace JiteLang.Main.Emit.Tree.Statements
             LabelExit = labelExit;
         }
 
-        public EmitStatement Else { get; set; }
-        public EmitLabelStatement LabelExit { get; set; }
-
-        public override void SetParent()
+        public EmitStatement Else
         {
-            Else.Parent = this;
-            LabelExit.Parent = this;
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
-
-        public override void SetParentRecursive()
+        public EmitLabelStatement LabelExit
         {
-            Else.Parent = this;
-            Else.SetParentRecursive();
-
-            LabelExit.Parent = this;
-            LabelExit.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

@@ -10,13 +10,5 @@ namespace JiteLang.Main.Emit.Tree.Expressions
         {
             Type = type;
         }
-
-        public override void SetParent()
-        {
-        }
-
-        public override void SetParentRecursive()
-        {
-        }
     }
 }

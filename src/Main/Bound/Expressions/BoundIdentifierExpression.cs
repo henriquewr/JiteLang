@@ -1,5 +1,4 @@
 ﻿using JiteLang.Main.Shared.Type;
-using JiteLang.Syntax;
 
 namespace JiteLang.Main.Bound.Expressions
 {
@@ -14,13 +13,5 @@ namespace JiteLang.Main.Bound.Expressions
         }
 
         public string Text { get; set; }
-
-        public override void SetParent()
-        {
-        }
-
-        public override void SetParentRecursive()
-        {
-        }
     }
 }

@@ -11,17 +11,14 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
             Else = @else;
         }
 
-        public StatementSyntax Else { get; set; }
-
-        public override void SetParent()
+        public StatementSyntax Else
         {
-            Else.Parent = this;
-        }
-
-        public override void SetParentRecursive()
-        {
-            Else.Parent = this;
-            Else.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

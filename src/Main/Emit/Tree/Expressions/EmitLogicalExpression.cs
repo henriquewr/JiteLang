@@ -17,22 +17,25 @@ namespace JiteLang.Main.Emit.Tree.Expressions
             Type = type;
         }
 
-        public EmitExpression Left { get; set; }
-        public LogicalOperatorKind Operation { get; set; }
-        public EmitExpression Right { get; set; }
-
-        public override void SetParent()
+        public EmitExpression Left
         {
-            Right.Parent = this;
-            Left.Parent = this;
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
 
-        public override void SetParentRecursive()
+        public LogicalOperatorKind Operation { get; set; }
+        public EmitExpression Right
         {
-            SetParent();
-
-            Right.SetParentRecursive();
-            Left.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

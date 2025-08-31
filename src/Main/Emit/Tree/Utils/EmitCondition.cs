@@ -11,8 +11,35 @@ namespace JiteLang.Main.Emit.Tree.Utils
             JumpIfFalse = jumpIfFalse;
         }
 
-        public EmitExpression Condition { get; set; }
+        public EmitExpression Condition
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = ParentToSet;
+            }
+        }
 
-        public EmitJumpStatement JumpIfFalse { get; set; }
+        public EmitJumpStatement JumpIfFalse
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = ParentToSet;
+            }
+        }
+
+        public EmitNode? ParentToSet
+        {
+            get;
+            set
+            {
+                field = value;
+                JumpIfFalse?.Parent = field;
+                Condition?.Parent = field;
+            }
+        }
     }
 }

@@ -7,31 +7,30 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.LocalDeclaration;
 
-        public BoundLocalDeclaration(BoundNode? parent, BoundIdentifierExpression identifier, TypeSymbol type, BoundExpression? initialValue = null) : base(parent, identifier, type)
+        public BoundLocalDeclaration(BoundNode? parent, BoundIdentifierExpression identifier, TypeSymbol type, BoundExpression? initialValue = null) : base(parent, type)
         {
             InitialValue = initialValue;
+            Identifier = identifier;
         }
 
-        public override void SetParent()
+        public BoundExpression? InitialValue
         {
-            Identifier.Parent = this;
-            if (InitialValue is not null)
+            get;
+            set
             {
-                InitialValue.Parent = this;
+                field = value;
+                field?.Parent = this;
             }
         }
 
-        public override void SetParentRecursive()
+        public override BoundIdentifierExpression Identifier
         {
-            Identifier.Parent = this;
-            Identifier.SetParentRecursive();
-            if (InitialValue is not null)
+            get;
+            set
             {
-                InitialValue.Parent = this;
-                InitialValue.SetParentRecursive();
+                field = value;
+                field?.Parent = this;
             }
         }
-
-        public BoundExpression? InitialValue { get; set; }
     }
 }

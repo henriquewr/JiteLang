@@ -1,5 +1,4 @@
 ﻿using JiteLang.Main.Emit.AsmBuilder.Scope;
-using JiteLang.Main.Emit.Tree.Expressions;
 using JiteLang.Main.Emit.Tree.Utils;
 
 namespace JiteLang.Main.Emit.Tree.Statements
@@ -11,38 +10,38 @@ namespace JiteLang.Main.Emit.Tree.Statements
         {
             JumpStart = new(this, null!);
             JumpStart.Label = EmitLabelStatement.Create(JumpStart, "whileStart");
-            JumpStart.SetParent();
             Condition = condition;
             Body = body;
         }  
        
-        public EmitCondition Condition { get; set; }
-
-        public EmitBlockStatement<EmitNode, CodeLocal> Body { get; set; }
-
-        public EmitJumpStatement JumpStart { get; set; }
-
-        public override void SetParent()
+        public EmitCondition Condition
         {
-            Condition.Condition.Parent = this;
-            Condition.JumpIfFalse.Parent = this;
-
-            Body.Parent = this;
-            JumpStart.Parent = this;
+            get;
+            set
+            {
+                field = value;
+                field?.ParentToSet = this;
+            }
         }
 
-        public override void SetParentRecursive()
+        public EmitBlockStatement<EmitNode, CodeLocal> Body
         {
-            Condition.Condition.Parent = this;
-            Condition.JumpIfFalse.Parent = this;
-            Condition.Condition.SetParentRecursive();
-            Condition.JumpIfFalse.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
 
-            Body.Parent = this;
-            Body.SetParentRecursive();
-
-            JumpStart.Parent = this;
-            JumpStart.SetParentRecursive();
+        public EmitJumpStatement JumpStart
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

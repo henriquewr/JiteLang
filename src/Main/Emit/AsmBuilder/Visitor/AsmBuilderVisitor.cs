@@ -314,7 +314,7 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
                 EmitKind.LogicalExpression => VisitLogicalExpression((EmitLogicalExpression)expression),
                 EmitKind.IdentifierExpression => VisitIdentifierExpression((EmitIdentifierExpression)expression),
                 EmitKind.CallExpression => VisitValuableCallExpression((EmitCallExpression)expression),
-                EmitKind.AssignmentExpression => VisitAssignmentExpression((EmitAssignmentExpression)expression),
+                EmitKind.AssignmentExpression => VisitValuableAssignmentExpression((EmitAssignmentExpression)expression),
                 EmitKind.NewExpression => VisitNewExpression((EmitNewExpression)expression),
                 _ => throw new UnreachableException(),
             };
@@ -679,6 +679,13 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
             return instructions;
         }
 
+        public List<Instruction> VisitValuableAssignmentExpression(EmitAssignmentExpression assignmentExpression)
+        {
+            var instructions = VisitAssignmentExpression(assignmentExpression);
+            instructions.Add(_asmBuilder.Push(Operand.Rbx));
+            return instructions;
+        }
+
         public List<Instruction> VisitAssignmentExpression(EmitAssignmentExpression assignmentExpression)
         {
             var instructions = new List<Instruction>();
@@ -777,6 +784,18 @@ namespace JiteLang.Main.Emit.AsmBuilder.Visitor
 
                 case EmitKind.AssignmentExpression:
                     return VisitAssignmentExpression((EmitAssignmentExpression)item);
+
+                case EmitKind.BlockStatement:
+
+                    var block = (EmitBlockStatement<EmitNode, CodeLocal>)item;
+                    var ret = new List<Instruction>(block.Members.Count);
+
+                    foreach (var blockItem in block.Members)
+                    {
+                        ret.AddRange(VisitDefaultBlock(blockItem));
+                    }
+
+                    return ret;
 
                 default:
                     throw new UnreachableException();

@@ -22,24 +22,21 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
             }
         }
 
-        public EmitBlockStatement<EmitNode, CodeField> Body { get; set; }
+        public EmitBlockStatement<EmitNode, CodeField> Body
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
         public TypeSymbol Type { get; set; }
 
         public string GetFullName(char separator = '.')
         {
             var parentNamespace = (EmitNamespaceDeclaration)Parent.Parent!;
             return $"{parentNamespace.Name}{separator}{Name}";
-        }
-
-        public override void SetParent()
-        {
-            Body.Parent = this;
-        }
-
-        public override void SetParentRecursive()
-        {
-            SetParent();
-            Body.SetParentRecursive();
         }
     }
 }

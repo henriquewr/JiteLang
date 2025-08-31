@@ -30,6 +30,7 @@ namespace JiteLang.Syntax
         public const string If = "if";
         public const string Else = "else";
         public const string While = "while";
+        public const string For = "for";
         public const string New = "new";
 
 
@@ -166,7 +167,9 @@ namespace JiteLang.Syntax
                 case Else:
                     return SyntaxKind.ElseKeyword;
                 case While:
-                    return SyntaxKind.WhileKeyword;        
+                    return SyntaxKind.WhileKeyword;
+                case For:
+                    return SyntaxKind.ForKeyword;
                 case New:
                     return SyntaxKind.NewKeyword;
 
@@ -250,6 +253,8 @@ namespace JiteLang.Syntax
                     return Else;
                 case SyntaxKind.WhileKeyword:
                     return While;
+                case SyntaxKind.ForKeyword:
+                    return For;
                 case SyntaxKind.NewKeyword:
                     return New;
 

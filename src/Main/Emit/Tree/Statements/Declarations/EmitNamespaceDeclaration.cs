@@ -11,17 +11,14 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
             Body = body;
         }
 
-        public EmitBlockStatement<EmitClassDeclaration, CodeVariable> Body { get; set; }
-
-        public override void SetParent()
+        public EmitBlockStatement<EmitClassDeclaration, CodeVariable> Body
         {
-            Body.Parent = this;
-        }
-
-        public override void SetParentRecursive()
-        {
-            Body.Parent = this;
-            Body.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

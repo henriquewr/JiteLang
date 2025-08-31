@@ -17,16 +17,13 @@ namespace JiteLang.Main.Emit.Tree.Statements
         {
             name += Interlocked.Increment(ref _labelCount);
             var emitLabel = new EmitLabelStatement(parent, name);
-            //emitLabel.SetParent(); // uncomment when SetParent does something
             return emitLabel;
         }
-
-        public override void SetParent()
+        public static EmitLabelStatement Create(string name)
         {
-        }
-
-        public override void SetParentRecursive()
-        {
+            name += Interlocked.Increment(ref _labelCount);
+            var emitLabel = new EmitLabelStatement(null, name);
+            return emitLabel;
         }
     }
 }

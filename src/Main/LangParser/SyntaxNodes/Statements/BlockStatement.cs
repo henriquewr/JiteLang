@@ -1,33 +1,45 @@
-﻿using System.Collections.Generic;
-using JiteLang.Syntax;
+﻿using JiteLang.Syntax;
+using JiteLang.Utilities;
+using System.Collections.Generic;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
 {
     internal class BlockStatement<TMembers> : StatementSyntax where TMembers : SyntaxNode
     {
-        public BlockStatement(List<TMembers> members) : base()
-        {
-            Members = members;
-        }
-
         public override SyntaxKind Kind => SyntaxKind.BlockStatement;
 
-        public List<TMembers> Members { get; set; }
-
-        public override void SetParent()
+        public BlockStatement(IEnumerable<TMembers> members) : base()
         {
-            foreach (var member in Members)
-            {
-                member.Parent = this;
-            }
+            Members = new(members);
         }
 
-        public override void SetParentRecursive()
+        public BlockStatement() : base()
         {
-            foreach (var member in Members)
+            Members = new();
+        }
+
+        protected void OnAdd(TMembers item)
+        {
+            item.Parent = this;
+        }
+
+        public NotifyAddList<TMembers> Members
+        { 
+            get; 
+            set
             {
-                member.Parent = this;
-                member.SetParentRecursive();
+                field?.OnAdd -= OnAdd;
+                field = value;
+
+                if (field is not null)
+                {
+                    field.OnAdd += OnAdd;
+
+                    foreach (var member in Members)
+                    {
+                        OnAdd(member);
+                    }
+                }
             }
         }
     }

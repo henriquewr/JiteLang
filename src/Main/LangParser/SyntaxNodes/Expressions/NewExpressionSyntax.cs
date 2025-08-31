@@ -1,5 +1,6 @@
 ﻿using JiteLang.Main.LangParser.Types;
 using JiteLang.Syntax;
+using JiteLang.Utilities;
 using System.Collections.Generic;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
@@ -8,29 +9,35 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.NewExpression;
 
-        public NewExpressionSyntax(TypeSyntax type, List<ExpressionSyntax> args) : base()
+        public NewExpressionSyntax(TypeSyntax type, IEnumerable<ExpressionSyntax> args) : base()
         {
             Type = type;
-            Args = args;
+            Args = new(args);
         }
 
         public TypeSyntax Type { get; set; }
-        public List<ExpressionSyntax> Args { get; set; }
-
-        public override void SetParent()
+        protected void OnAdd(ExpressionSyntax item)
         {
-            foreach (var arg in Args)
-            {
-                arg.Parent = this;
-            }
+            item.Parent = this;
         }
 
-        public override void SetParentRecursive()
+        public NotifyAddList<ExpressionSyntax> Args
         {
-            foreach (var arg in Args)
+            get;
+            set
             {
-                arg.Parent = this;
-                arg.SetParentRecursive();
+                field?.OnAdd -= OnAdd;
+                field = value;
+
+                if (field is not null)
+                {
+                    field.OnAdd += OnAdd;
+
+                    foreach (var member in Args)
+                    {
+                        OnAdd(member);
+                    }
+                }
             }
         }
     }

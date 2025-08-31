@@ -4,6 +4,7 @@ using JiteLang.Main.Shared.Type;
 using JiteLang.Main.Shared.Type.Members.Method;
 using JiteLang.Main.Visitor.Type.Scope;
 using JiteLang.Syntax;
+using JiteLang.Utilities;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -18,44 +19,71 @@ namespace JiteLang.Main.Bound.Statements.Declaration
             BoundIdentifierExpression identifierExpression,
             TypeSymbol returnType,
             BoundBlockStatement<BoundNode, TypeLocal> body,
-            List<BoundParameterDeclaration> @params
-            ) : base(parent, identifierExpression)
+            NotifyAddList<BoundParameterDeclaration> @params
+            ) : base(parent)
         {
             Body = body;
+            Identifier = identifierExpression;
             Params = @params;
             ReturnType = returnType;
         }
 
-        public override void SetParent()
-        {
-            Body.Parent = this;
-            Identifier.Parent = this;
-
-            foreach (var param in Params)
-            {
-                param.Parent = Body;
-            }
-        }
-
-        public override void SetParentRecursive()
-        {
-            Body.Parent = this;
-            Identifier.Parent = this;
-
-            Body.SetParentRecursive();
-            Identifier.SetParentRecursive();
-
-            foreach (var param in Params)
-            {
-                param.Parent = Body;
-                param.SetParentRecursive();
-            }
-        }
-
         public Modifier Modifiers { get; set; }
         public AccessModifier AccessModifiers { get; set; }
-        public List<BoundParameterDeclaration> Params { get; set; }
-        public BoundBlockStatement<BoundNode, TypeLocal> Body { get; set; }
+
+        protected void OnAdd(BoundParameterDeclaration item)
+        {
+            item.Parent = Body;
+        }
+
+        public NotifyAddList<BoundParameterDeclaration> Params
+        {
+            get;
+            set
+            {
+                field?.OnAdd -= OnAdd;
+                field = value;
+
+                if (field is not null)
+                {
+                    field.OnAdd += OnAdd;
+
+                    foreach (var member in field)
+                    {
+                        OnAdd(member);
+                    }
+                }
+            }
+        }
+
+        public BoundBlockStatement<BoundNode, TypeLocal> Body
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+
+                if (Params is not null)
+                {
+                    foreach (var member in Params)
+                    {
+                        OnAdd(member);
+                    }
+                }
+            }
+        }
+
+        public override BoundIdentifierExpression Identifier
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
+
         public TypeSymbol ReturnType { get; set; }
         public bool IsInitializer { get; set; }
 

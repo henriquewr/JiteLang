@@ -12,13 +12,5 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
 
         public Modifier Modifiers { get; set; }
         public AccessModifier AccessModifiers { get; set; }
-
-        public override void SetParent()
-        {
-        }
-
-        public override void SetParentRecursive()
-        {
-        }
     }
 }

@@ -7,19 +7,19 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.ParameterDeclaration;
 
-        public BoundParameterDeclaration(BoundNode? parent, BoundIdentifierExpression identifierExpression, TypeSymbol type) : base(parent, identifierExpression, type)
+        public BoundParameterDeclaration(BoundNode? parent, BoundIdentifierExpression identifierExpression, TypeSymbol type) : base(parent, type)
         {
+            Identifier = identifierExpression;
         }
 
-        public override void SetParent()
+        public override BoundIdentifierExpression Identifier
         {
-            Identifier.Parent = this;
-        }
-
-        public override void SetParentRecursive()
-        {
-            SetParent();
-            Identifier.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

@@ -36,9 +36,6 @@ namespace JiteLang.Main.Emit.Tree
                 emitNamespace.Body.Members.Add(VisitClassDeclaration(classDeclaration, emitNamespace.Body));
             }
 
-            emitNamespace.SetParent();
-            emitNamespace.Body.SetParent();
-
             return emitNamespace;
         }
 
@@ -66,9 +63,6 @@ namespace JiteLang.Main.Emit.Tree
                         throw new UnreachableException();
                 }
             }
-
-            emitClass.SetParent();
-            emitClass.Body.SetParent();
 
             return emitClass;
         }
@@ -140,9 +134,6 @@ namespace JiteLang.Main.Emit.Tree
                 emitMethodDeclaration.Body.Members.Add(VisitDefaultBlock(item, emitMethodDeclaration.Body));
             }
 
-            emitMethodDeclaration.SetParent();
-            emitMethodDeclaration.Body.SetParent();
-
             return emitMethodDeclaration;
         }
 
@@ -152,7 +143,6 @@ namespace JiteLang.Main.Emit.Tree
             AddParameter(method, parameterDeclaration.Identifier.Text, parameterDeclaration.Type);
 
             EmitParameterDeclaration parameter = new(parent, parameterDeclaration.Identifier.Text);
-            parameter.SetParent();
             return parameter;
         }
 
@@ -198,7 +188,6 @@ namespace JiteLang.Main.Emit.Tree
             var location = declarable.Variables.Count * 8;
 
             declarable.Variables.Add(emitFieldDeclaration.Name, new CodeField(fieldDeclaration.Type, location));
-            emitFieldDeclaration.SetParent();
 
             return emitFieldDeclaration;
         }
@@ -214,8 +203,6 @@ namespace JiteLang.Main.Emit.Tree
                 emitReturnStatement.ReturnValue = VisitExpression(returnStatement.ReturnValue, emitReturnStatement);
             }
 
-            emitReturnStatement.SetParent();
-
             return emitReturnStatement;
         }
 
@@ -227,8 +214,6 @@ namespace JiteLang.Main.Emit.Tree
             var jumpStmt = new EmitJumpStatement(emitIf, null!);
             jumpStmt.Label = EmitLabelStatement.Create(jumpStmt, "ifEnd");
             emitIf.Condition = new EmitCondition(condition, jumpStmt);
-            emitIf.Condition.Condition.SetParent();
-            emitIf.Condition.JumpIfFalse.SetParent();
 
             emitIf.Body = new EmitBlockStatement<EmitNode, CodeLocal>(emitIf, new(ifStatement.Body.Members.Count));
             labelExit ??= EmitLabelStatement.Create(emitIf, "ifExit");
@@ -244,9 +229,6 @@ namespace JiteLang.Main.Emit.Tree
                 emitIf.Else = VisitElseStatement(ifStatement.Else, emitIf, emitIf.LabelExit);
             }
 
-            emitIf.SetParent();
-            emitIf.Body.SetParent();
-
             return emitIf;
         }
 
@@ -259,7 +241,6 @@ namespace JiteLang.Main.Emit.Tree
                 BoundKind.IfStatement => VisitIfStatement((BoundIfStatement)elseStatement.Else, emitElse, emitElse.LabelExit),
                 _ => throw new UnreachableException(),
             };
-            emitElse.SetParent();
             return emitElse;
 
             EmitBlockStatement<EmitNode, CodeLocal> VisitElseBody(BoundBlockStatement<BoundNode, TypeLocal> elseBody)
@@ -270,8 +251,6 @@ namespace JiteLang.Main.Emit.Tree
                 {
                     emitBlock.Members.Add(VisitDefaultBlock(item, emitBlock));
                 }
-
-                emitBlock.SetParent();
 
                 return emitBlock;
             }
@@ -285,8 +264,6 @@ namespace JiteLang.Main.Emit.Tree
             jumpStmt.Label = EmitLabelStatement.Create(jumpStmt, "whileEnd");
             var condition = VisitExpression(whileStatement.Condition, emitWhile);
             emitWhile.Condition = new EmitCondition(condition, jumpStmt);
-            emitWhile.Condition.Condition.SetParent();
-            emitWhile.Condition.JumpIfFalse.SetParent();
             emitWhile.Body = new(emitWhile, new(whileStatement.Body.Members.Count));
 
             foreach (var item in whileStatement.Body.Members)
@@ -294,10 +271,40 @@ namespace JiteLang.Main.Emit.Tree
                 emitWhile.Body.Members.Add(VisitDefaultBlock(item, emitWhile.Body));
             }
 
-            emitWhile.SetParent();
-            emitWhile.Body.SetParent();
-
             return emitWhile;
+        }
+
+        public EmitBlockStatement<EmitNode, CodeLocal> VisitForStatement(BoundForStatement forStatement, EmitNode parent)
+        {
+            var loweredFor = new EmitBlockStatement<EmitNode, CodeLocal>(parent, new(forStatement.Body.Members.Count + 2));
+
+            EmitNode initializer = forStatement.Initializer.Kind switch
+            {
+                BoundKind.LocalDeclaration => VisitLocalDeclaration((BoundLocalDeclaration)forStatement.Initializer, loweredFor),
+                BoundKind.AssignmentExpression => VisitAssignmentExpression((BoundAssignmentExpression)forStatement.Initializer, loweredFor),
+                BoundKind.CallExpression => VisitCallExpression((BoundCallExpression)forStatement.Initializer, loweredFor),
+                _ => throw new UnreachableException(),
+            };
+
+            loweredFor.Members.Add(initializer);
+
+            EmitWhileStatement emitWhile = new(parent, null!, null!);
+            var jumpStmt = new EmitJumpStatement(emitWhile, EmitLabelStatement.Create("forEnd"));
+            var condition = VisitExpression(forStatement.Condition, emitWhile);
+            emitWhile.Condition = new EmitCondition(condition, jumpStmt);
+
+            emitWhile.Body = new(emitWhile, new(forStatement.Body.Members.Count));
+
+            foreach (var item in forStatement.Body.Members)
+            {
+                emitWhile.Body.Members.Add(VisitDefaultBlock(item, emitWhile.Body));
+            }
+
+            emitWhile.Body.Members.Add(VisitDefaultBlock(forStatement.Incrementor, emitWhile.Body));
+
+            loweredFor.Members.Add(emitWhile);
+
+            return loweredFor;
         }
         #endregion Statements
 
@@ -327,14 +334,12 @@ namespace JiteLang.Main.Emit.Tree
             EmitBinaryExpression emitBinaryExpression = new(parent, null!, binaryExpression.Operation, null!, binaryExpression.Type);
             emitBinaryExpression.Left = VisitExpression(binaryExpression.Left, emitBinaryExpression);
             emitBinaryExpression.Right = VisitExpression(binaryExpression.Right, emitBinaryExpression);
-            emitBinaryExpression.SetParent();
             return emitBinaryExpression;
         }
 
         public EmitIdentifierExpression VisitIdentifierExpression(BoundIdentifierExpression identifierExpression, EmitNode parent)
         {
             EmitIdentifierExpression emitIdentifier = new(parent, identifierExpression.Text, identifierExpression.Type);
-            emitIdentifier.SetParent();
             return emitIdentifier;
         }
 
@@ -344,14 +349,12 @@ namespace JiteLang.Main.Emit.Tree
 
             emitLogicalExpression.Left = VisitExpression(logicalExpression.Left, emitLogicalExpression);
             emitLogicalExpression.Right = VisitExpression(logicalExpression.Right, emitLogicalExpression);
-            emitLogicalExpression.SetParent();
             return emitLogicalExpression;
         }
 
         public EmitLiteralExpression VisitLiteralExpression(BoundLiteralExpression literalExpression, EmitNode parent)
         {
             EmitLiteralExpression emitLiteralExpression = new(parent, literalExpression.Value);
-            emitLiteralExpression.SetParent();
             return emitLiteralExpression;
         }
 
@@ -360,8 +363,6 @@ namespace JiteLang.Main.Emit.Tree
             EmitMemberExpression emitMemberExpr = new(parent, null!, null!, memberExpression.Type);
             emitMemberExpr.Left = VisitExpression(memberExpression.Left, emitMemberExpr);
             emitMemberExpr.Right = VisitIdentifierExpression(memberExpression.Right, emitMemberExpr);
-
-            emitMemberExpr.SetParent();
 
             return emitMemberExpr;
         }
@@ -380,8 +381,7 @@ namespace JiteLang.Main.Emit.Tree
         {
             EmitCallExpression emitCallExpression = new(parent, null!, null!);
             emitCallExpression.Caller = VisitExpression(callExpression.Caller, emitCallExpression);
-            emitCallExpression.Args = callExpression.Args.Select(x => VisitExpression(x, emitCallExpression)).ToList();
-            emitCallExpression.SetParent();
+            emitCallExpression.Args = new(callExpression.Args.Select(x => VisitExpression(x, emitCallExpression)));
             return emitCallExpression;
         }
 
@@ -399,8 +399,6 @@ namespace JiteLang.Main.Emit.Tree
                 default:
                     throw new NotImplementedException();
             }
-
-            emitAssingnment.SetParent();
 
             return emitAssingnment;
         }
@@ -421,8 +419,6 @@ namespace JiteLang.Main.Emit.Tree
             callExpr.Caller = new EmitIdentifierExpression(callExpr, typeDeclaration.Initializer.Label.Name, typeDeclaration.Initializer.Type);
 
             newExpr.Initializer.Members.Add(callExpr);
-
-            newExpr.SetParentRecursive();
 
             return newExpr;
         }
@@ -447,6 +443,9 @@ namespace JiteLang.Main.Emit.Tree
 
                 case BoundKind.WhileStatement:
                     return VisitWhileStatement((BoundWhileStatement)item, parent);
+
+                case BoundKind.ForStatement:
+                    return VisitForStatement((BoundForStatement)item, parent);
 
                 case BoundKind.AssignmentExpression:
                     return VisitAssignmentExpression((BoundAssignmentExpression)item, parent);

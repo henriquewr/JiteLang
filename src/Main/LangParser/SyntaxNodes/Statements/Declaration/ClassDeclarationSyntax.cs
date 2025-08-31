@@ -9,30 +9,35 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
 
         public ClassDeclarationSyntax(IdentifierExpressionSyntax identifier, BlockStatement<SyntaxNode> body) : base(identifier)
         {
+            Identifier = identifier;
             Body = body;
         }
 
-        public BlockStatement<SyntaxNode> Body { get; set; }
+        public BlockStatement<SyntaxNode> Body
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
+
+        public override IdentifierExpressionSyntax Identifier
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
+
 
         public string GetFullName()
         {
             var parentNamespace = (NamespaceDeclarationSyntax)Parent.Parent!;
             return $"{parentNamespace.Identifier.Text}.{Identifier.Text}";
-        }
-
-        public override void SetParent()
-        {
-            Identifier.Parent = this;
-            Body.Parent = this;
-        }
-
-        public override void SetParentRecursive()
-        {
-            Identifier.Parent = this;
-            Body.Parent = this;
-
-            Identifier.SetParentRecursive();
-            Body.SetParentRecursive();
         }
     }
 }

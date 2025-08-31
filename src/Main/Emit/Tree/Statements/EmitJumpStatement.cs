@@ -9,17 +9,14 @@ namespace JiteLang.Main.Emit.Tree.Statements
             Label = label;
         }
 
-        public EmitLabelStatement Label { get; set; }
-
-        public override void SetParent()
+        public EmitLabelStatement Label
         {
-            Label.Parent = this;
-        }
-
-        public override void SetParentRecursive()
-        {
-            Label.Parent = this;
-            Label.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

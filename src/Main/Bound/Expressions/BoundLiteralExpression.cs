@@ -14,13 +14,5 @@ namespace JiteLang.Main.Bound.Expressions
             Type = value.Type;
         }
         public ConstantValue Value { set; get; }
-
-        public override void SetParent()
-        {
-        }
-
-        public override void SetParentRecursive()
-        {
-        }
     }
 }

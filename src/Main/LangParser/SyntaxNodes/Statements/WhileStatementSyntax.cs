@@ -3,7 +3,7 @@ using JiteLang.Syntax;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
 {
-    internal class WhileStatementSyntax : StatementSyntax
+    internal class WhileStatementSyntax : LoopStatementSyntax
     {
         public override SyntaxKind Kind => SyntaxKind.WhileStatement;
 
@@ -13,22 +13,24 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
             Body = body;
         }
 
-        public ExpressionSyntax Condition { get; set; }
-
-        public BlockStatement<SyntaxNode> Body { get; set; }
-
-        public override void SetParent()
-        {
-            Condition.Parent = this;
-            Body.Parent = this;
+        public ExpressionSyntax Condition 
+        { 
+            get;
+            set 
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
 
-        public override void SetParentRecursive()
-        {
-            SetParent();
-
-            Condition.SetParentRecursive();
-            Body.SetParentRecursive();
+        public BlockStatement<SyntaxNode> Body 
+        { 
+            get; 
+            set
+            {  
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

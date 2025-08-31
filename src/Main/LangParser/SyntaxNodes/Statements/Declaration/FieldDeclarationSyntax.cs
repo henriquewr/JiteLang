@@ -9,32 +9,30 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
     {
         public override SyntaxKind Kind => SyntaxKind.FieldDeclaration;
         
-        public FieldDeclarationSyntax(List<SyntaxToken> modifiers, IdentifierExpressionSyntax identifier, TypeSyntax type, ExpressionSyntax? initialValue = null) : base(identifier, type, initialValue)
+        public FieldDeclarationSyntax(List<SyntaxToken> modifiers, IdentifierExpressionSyntax identifier, TypeSyntax type, ExpressionSyntax? initialValue = null) : base(identifier, type)
         {
             Modifiers = modifiers;
+            Identifier = identifier;
         }
 
         public List<SyntaxToken> Modifiers { get; set; }
-
-        public override void SetParent()
+        public override ExpressionSyntax? InitialValue
         {
-            Identifier.Parent = this;
-
-            if (InitialValue is not null)
+            get;
+            set
             {
-                InitialValue.Parent = this;
+                field = value;
+                field?.Parent = this;
             }
         }
 
-        public override void SetParentRecursive()
+        public override IdentifierExpressionSyntax Identifier
         {
-            Identifier.Parent = this;
-            Identifier.SetParentRecursive();
-
-            if (InitialValue is not null)
+            get;
+            set
             {
-                InitialValue.Parent = this;
-                InitialValue.SetParentRecursive();
+                field = value;
+                field?.Parent = this;
             }
         }
     }

@@ -22,7 +22,7 @@ namespace JiteLang.Main.Emit.AsmBuilder.Builder.Abstractions
             var strLength = str.Length + 1; //string strLength + null terminator
 
             var instructions = AllocateMemory(new Operand(strLength + MetadataLength));
-
+            
             instructions.Add(_asmBuilder.Mov(new Operand($"qword [rax]"), new Operand(strLength)));
             instructions.Add(_asmBuilder.Add(Operand.Rax, new Operand(MetadataLength)));
 
@@ -72,12 +72,14 @@ namespace JiteLang.Main.Emit.AsmBuilder.Builder.Abstractions
                     MEM_TOP_DOWN: 0x100000	
              */
             var instructions = new List<Instruction>
-            { 
+            {
+                _asmBuilder.Sub(Operand.Rsp, new Operand(32)),
                 _asmBuilder.Xor(Operand.Rcx, Operand.Rcx),
                 _asmBuilder.Mov(Operand.Rdx, size),
                 _asmBuilder.Mov(Operand.R8, new Operand(flAllocationType.ToString())),
                 _asmBuilder.Mov(Operand.R9, new Operand(permissions.ToString())),
-                _asmBuilder.Call(new Operand("VirtualAlloc"))
+                _asmBuilder.Call(new Operand("VirtualAlloc")),
+                _asmBuilder.Add(Operand.Rsp, new Operand(32)),
             };
 
             return instructions;

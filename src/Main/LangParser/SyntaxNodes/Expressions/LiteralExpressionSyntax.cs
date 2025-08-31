@@ -12,13 +12,5 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
 
         public override SyntaxKind Kind => SyntaxKind.LiteralExpression;
         public SyntaxToken Value { set; get; }
-
-        public override void SetParent()
-        {
-        }
-
-        public override void SetParentRecursive()
-        {
-        }
     }
 }

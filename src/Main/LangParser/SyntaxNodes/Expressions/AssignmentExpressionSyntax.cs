@@ -13,23 +13,24 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
             Right = right;
         }
 
-        public ExpressionSyntax Left { get; set; }
-        public SyntaxKind Operator { get; set; }
-        public ExpressionSyntax Right { get; set; }
-
-        public override void SetParent()
+        public ExpressionSyntax Left
         {
-            Left.Parent = this;
-            Right.Parent = this;
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
-
-        public override void SetParentRecursive()
+        public SyntaxKind Operator { get; set; }
+        public ExpressionSyntax Right
         {
-            Left.Parent = this;
-            Right.Parent = this;
-
-            Left.SetParentRecursive();
-            Right.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

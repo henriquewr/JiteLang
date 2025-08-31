@@ -16,21 +16,23 @@ namespace JiteLang.Main.Bound.Statements
             Body = body;
         }
 
-        public BoundExpression Condition { get; set; }
-        public BoundBlockStatement<BoundNode, TypeLocal> Body { get; set; }
-
-        public override void SetParent()
+        public BoundExpression Condition
         {
-            Condition.Parent = this;
-            Body.Parent = this;
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
-
-        public override void SetParentRecursive()
+        public BoundBlockStatement<BoundNode, TypeLocal> Body
         {
-            SetParent();
-
-            Condition.SetParentRecursive();
-            Body.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

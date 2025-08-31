@@ -77,9 +77,6 @@ namespace JiteLang.Main.Bound
                 boundNamespaceDeclaration.Body.Members.Add(BindClassDeclaration(item, scope, boundNamespaceDeclaration.Body));
             }
 
-            boundNamespaceDeclaration.SetParent();
-            boundNamespaceDeclaration.Body.SetParent();
-
             return boundNamespaceDeclaration;
         }
 
@@ -127,9 +124,6 @@ namespace JiteLang.Main.Bound
             }
 
             boundClassDeclaration.Body.Variables = newScope.Variables.Select(x => new KeyValuePair<string, TypeField>(x.Key, (TypeField)x.Value)).ToDictionary();
-
-            boundClassDeclaration.SetParent();
-            boundClassDeclaration.Body.SetParent();
 
             return boundClassDeclaration;
 
@@ -211,7 +205,7 @@ namespace JiteLang.Main.Bound
                 null!
             );
             method.Body = new BoundBlockStatement<BoundNode, TypeLocal>(method, new(methodDeclarationSyntax.Body.Members.Count));
-            method.Params = methodDeclarationSyntax.Params.Select(x => BindMethodParameter(x, newScope, method.Body)).ToList();
+            method.Params = new(methodDeclarationSyntax.Params.Select(x => BindMethodParameter(x, newScope, method.Body)));
 
             method.Identifier = BindIdentifierExpression(methodDeclarationSyntax.Identifier, newScope, method);
             (method.Modifiers, method.AccessModifiers) = ConvertModifier(methodDeclarationSyntax.Modifiers);
@@ -235,9 +229,6 @@ namespace JiteLang.Main.Bound
             }
 
             method.Body.Variables = newScope.Variables.Select(x => new KeyValuePair<string, TypeLocal>(x.Key, (TypeLocal)x.Value)).ToDictionary();
-
-            method.SetParent();
-            method.Body.SetParent();
 
             return method;
 
@@ -292,7 +283,6 @@ namespace JiteLang.Main.Bound
                 type
             );
             boundParameter.Identifier = BindIdentifierExpression(parameterDeclarationSyntax.Identifier, scope, boundParameter);
-            boundParameter.SetParent();
             return boundParameter;
         }
 
@@ -318,8 +308,6 @@ namespace JiteLang.Main.Bound
                     AddError($"Cannot implicit convert '{boundLocal.InitialValue.Type.FullText}' to type '{variableType.FullText}'", localDeclarationSyntax.Position);
                 }
             }
-
-            boundLocal.SetParent();
 
             return boundLocal;
         }
@@ -377,10 +365,7 @@ namespace JiteLang.Main.Bound
 
                 //Dont add after the return
                 parentClass.Initializer.Body.Members.Insert(parentClass.Initializer.Body.Members.Count - 1, fieldInitializer);
-                parentClass.Initializer.SetParentRecursive();
             }
-
-            fieldDeclaration.SetParentRecursive();
 
             return fieldDeclaration;
         }
@@ -414,9 +399,6 @@ namespace JiteLang.Main.Bound
 
             boundIfStmt.Body.Variables = newScope.Variables.Select(x => new KeyValuePair<string, TypeLocal>(x.Key, (TypeLocal)x.Value)).ToDictionary();
             
-            boundIfStmt.SetParent();
-            boundIfStmt.Body.SetParent();
-
             return boundIfStmt;
         }
 
@@ -430,7 +412,6 @@ namespace JiteLang.Main.Bound
                 SyntaxKind.IfStatement => BindIfStatement((IfStatementSyntax)elseStatementSyntax.Else, scope, elseStmt), //TODO: maybe use the 'newScope' for if else
                 _ => throw new UnreachableException(),
             };
-            elseStmt.SetParent();
 
             return elseStmt;
 
@@ -451,8 +432,6 @@ namespace JiteLang.Main.Bound
                 }
 
                 boundBlock.Variables = newScope.Variables.Select(x => new KeyValuePair<string, TypeLocal>(x.Key, (TypeLocal)x.Value)).ToDictionary();
-
-                boundBlock.SetParent();
 
                 return boundBlock;
             }
@@ -483,10 +462,52 @@ namespace JiteLang.Main.Bound
 
             boundWhile.Body.Variables = newScope.Variables.Select(x => new KeyValuePair<string, TypeLocal>(x.Key, (TypeLocal)x.Value)).ToDictionary();
 
-            boundWhile.SetParent();
-            boundWhile.Body.SetParent();
-
             return boundWhile;
+        }
+
+        public virtual BoundStatement BindForStatement(ForStatementSyntax forStatementSyntax, TypeScope scope, BoundNode parent)
+        {
+            TypeScope newScope = new(scope);
+
+            var boundFor = new BoundForStatement
+            (
+                parent,
+                null!,
+                null!,
+                null!,
+                new BoundBlockStatement<BoundNode, TypeLocal>(new(forStatementSyntax.Body.Members.Count))
+            );
+
+            boundFor.Initializer = forStatementSyntax.Initializer.Kind switch
+            {
+                SyntaxKind.LocalDeclaration => BindLocalDeclaration((LocalDeclarationSyntax)forStatementSyntax.Initializer, newScope, boundFor.Body),
+                SyntaxKind.AssignmentExpression => BindAssignmentExpression((AssignmentExpressionSyntax)forStatementSyntax.Initializer, newScope, boundFor.Body),
+                SyntaxKind.CallExpression => BindCallExpression((CallExpressionSyntax)forStatementSyntax.Initializer, newScope, boundFor.Body),
+                _ => throw new NotImplementedException(),
+            };
+
+            boundFor.Condition = BindExpression(forStatementSyntax.Condition, newScope, boundFor.Body);
+
+            if (!boundFor.Condition.Type.IsEqualsNotError(PredefinedTypeSymbol.Bool) && !_bindingContext.ConversionTable.TryGetImplicitConversion(boundFor.Condition.Type, PredefinedTypeSymbol.Bool, out var conversion))
+            {
+                AddError($"Cannot implicit convert '{boundFor.Condition.Type.FullText}' to type '{PredefinedTypeSymbol.Bool.FullText}'", forStatementSyntax.Condition.Position);
+            }
+
+            boundFor.Incrementor = BindExpression(forStatementSyntax.Incrementor, newScope, boundFor.Body);
+
+            foreach (var item in forStatementSyntax.Body.Members)
+            {
+                boundFor.Body.Members.Add(BindDefaultBlock(item, newScope, boundFor.Body));
+
+                if (item.Kind == SyntaxKind.ReturnStatement)
+                {
+                    break;
+                }
+            }
+
+            boundFor.Body.Variables = newScope.Variables.ToDictionary(k => k.Key, v => (TypeLocal)v.Value);
+
+            return boundFor;
         }
 
         public virtual BoundStatement BindReturnStatement(ReturnStatementSyntax returnStatementSyntax, TypeScope scope, BoundNode parent)
@@ -504,13 +525,11 @@ namespace JiteLang.Main.Bound
             {
                 boundReturn.ReturnValue = BindExpression(returnStatementSyntax.ReturnValue, scope, boundReturn);
 
-                if (method is not null && !boundReturn.ReturnValue.Type.Equals(method.ReturnType) && _bindingContext.ConversionTable.TryGetImplicitConversion(boundReturn.ReturnValue.Type, method.ReturnType, out var conversion))
+                if (method is not null && !boundReturn.ReturnValue.Type.Equals(method.ReturnType) && !_bindingContext.ConversionTable.TryGetImplicitConversion(boundReturn.ReturnValue.Type, method.ReturnType, out var conversion))
                 {
                     AddError($"Cannot implicit convert '{boundReturn.ReturnValue.Type.FullText}' to type '{method.ReturnType.FullText}'", returnStatementSyntax.Position);
                 }
             }
-
-            boundReturn.SetParent();
 
             return boundReturn;
         }
@@ -525,7 +544,6 @@ namespace JiteLang.Main.Bound
 
             builtAssignmentExpr.Right = BindExpression(assignmentExpressionSyntax.Right, scope, builtAssignmentExpr);
             builtAssignmentExpr.Left = BindExpression(assignmentExpressionSyntax.Left, scope, builtAssignmentExpr);
-            builtAssignmentExpr.SetParent();
 
             if (!builtAssignmentExpr.Right.Type.Equals(builtAssignmentExpr.Left.Type) && !_bindingContext.ConversionTable.TryGetImplicitConversion(builtAssignmentExpr.Right.Type, builtAssignmentExpr.Left.Type, out var conversion))
             {
@@ -592,7 +610,6 @@ namespace JiteLang.Main.Bound
             }
 
             BoundLiteralExpression builtLiteralExpression = new(parent, constantValue);
-            builtLiteralExpression.SetParentRecursive();
             return builtLiteralExpression;
         }
 
@@ -610,12 +627,9 @@ namespace JiteLang.Main.Bound
             }
 
             BoundIdentifierExpression builtIdentifierExpression = new(parent, memberExpressionSyntax.Right.Text, targetMember?.Type ?? ErrorTypeSymbol.Instance);
-            builtIdentifierExpression.SetParent();
 
             boundMemberExpr.Right = builtIdentifierExpression;
             boundMemberExpr.Type = boundMemberExpr.Right.Type;
-
-            boundMemberExpr.SetParent();
 
             return boundMemberExpr;
         }
@@ -645,7 +659,6 @@ namespace JiteLang.Main.Bound
             boundBinaryExrp.Right = BindExpression(binaryExpressionSyntax.Right, scope, boundBinaryExrp);
 
             boundBinaryExrp.Type = BinaryExprTypeResolver.Resolve(boundBinaryExrp.Left.Type, boundBinaryExrp.Operation, boundBinaryExrp.Right.Type);
-            boundBinaryExrp.SetParent();
             if (boundBinaryExrp.Type.IsError())
             {
                 AddError($"Cannot implicit convert '{boundBinaryExrp.Left.Type.FullText}' to type '{boundBinaryExrp.Right.Type.FullText}'", binaryExpressionSyntax.Left.Position);
@@ -674,7 +687,6 @@ namespace JiteLang.Main.Bound
             {
                 AddError($"Operator not defined for '{boundLogicalExpr.Left.Type.FullText}' and '{boundLogicalExpr.Right.Type.FullText}'", logicalExpressionSyntax.Left.Position);
             }
-            boundLogicalExpr.SetParent();
             return boundLogicalExpr;
         }
 
@@ -682,7 +694,7 @@ namespace JiteLang.Main.Bound
         {
             BoundCallExpression builtCallExpression = new(parent, null!, null!);
             builtCallExpression.Caller = BindExpression(callExpressionSyntax.Caller, scope, builtCallExpression);
-            builtCallExpression.Args = callExpressionSyntax.Args.Select(item => BindExpression(item, scope, builtCallExpression)).ToList();
+            builtCallExpression.Args = new(callExpressionSyntax.Args.Select(item => BindExpression(item, scope, builtCallExpression)));
 
             if (builtCallExpression.Caller.Type is not DelegateTypeSymbol methodType)
             {
@@ -713,8 +725,6 @@ namespace JiteLang.Main.Bound
                 }
             }
 
-            builtCallExpression.SetParent();
-
             return builtCallExpression;
         }
 
@@ -728,7 +738,7 @@ namespace JiteLang.Main.Bound
             }
 
             BoundIdentifierExpression builtIdentifierExpression = new(parent, identifierExpressionSyntax.Text, identifier?.Type ?? ErrorTypeSymbol.Instance);
-            builtIdentifierExpression.SetParent();
+
             return builtIdentifierExpression;
         }
         
@@ -762,8 +772,6 @@ namespace JiteLang.Main.Bound
                 resultType!
             );
 
-            boundMemberExpr.SetParentRecursive();
-
             return boundMemberExpr;
         }
 
@@ -772,7 +780,7 @@ namespace JiteLang.Main.Bound
             var targetMemberedType = (MemberedTypeSymbol)ResolveType(newExpressionSyntax.Type);
             var boundNewExpr = new BoundNewExpression(parent, targetMemberedType, null!);
 
-            boundNewExpr.Args = newExpressionSyntax.Args.Select(arg => BindExpression(arg, scope, boundNewExpr)).ToList();
+            boundNewExpr.Args = new(newExpressionSyntax.Args.Select(arg => BindExpression(arg, scope, boundNewExpr)));
 
             var argsTypes = boundNewExpr.Args.Select(x => x.Type).ToList();
 
@@ -813,8 +821,6 @@ namespace JiteLang.Main.Bound
                 }
             }
 
-            boundNewExpr.SetParentRecursive();
-
             return boundNewExpr;
         }
 
@@ -846,6 +852,7 @@ namespace JiteLang.Main.Bound
                 SyntaxKind.ReturnStatement => BindReturnStatement((ReturnStatementSyntax)item, scope, parent),
                 SyntaxKind.IfStatement => BindIfStatement((IfStatementSyntax)item, scope, parent),
                 SyntaxKind.WhileStatement => BindWhileStatement((WhileStatementSyntax)item, scope, parent),
+                SyntaxKind.ForStatement => BindForStatement((ForStatementSyntax)item, scope, parent),
                 SyntaxKind.AssignmentExpression => BindAssignmentExpression((AssignmentExpressionSyntax)item, scope, parent),
                 _ => throw new UnreachableException(),
             };

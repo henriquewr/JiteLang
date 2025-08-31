@@ -14,36 +14,33 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements
             Else = @else;
         }
 
-        public ExpressionSyntax Condition { get; set; }
-
-        public BlockStatement<SyntaxNode> Body { get; set; }
-
-        public ElseStatementSyntax? Else { get; set; }
-
-
-        public override void SetParent()
+        public ExpressionSyntax Condition
         {
-            Condition.Parent = this;
-            Body.Parent = this;
-
-            if (Else is not null)
+            get;
+            set
             {
-                Else.Parent = this;
+                field = value;
+                field?.Parent = this;
             }
         }
 
-        public override void SetParentRecursive()
+        public BlockStatement<SyntaxNode> Body
         {
-            Condition.Parent = this;
-            Condition.SetParentRecursive();
-
-            Body.Parent = this;
-            Body.SetParentRecursive();
-
-            if (Else is not null)
+            get;
+            set
             {
-                Else.Parent = this;
-                Else.SetParentRecursive();
+                field = value;
+                field?.Parent = this;
+            }
+        }
+
+        public ElseStatementSyntax? Else
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
             }
         }
     }

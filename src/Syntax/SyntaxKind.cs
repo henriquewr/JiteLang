@@ -152,14 +152,16 @@ namespace JiteLang.Syntax
         ElseKeyword = 3016,
         /// <summary><c> while </c></summary>
         WhileKeyword = 3017,
+        /// <summary><c> while </c></summary>
+        ForKeyword = 3018,
         /// <summary><c> extern </c></summary>
-        ExternKeyword = 3018,
+        ExternKeyword = 3019,
         /// <summary><c> new </c></summary>
-        NewKeyword = 3019,        
+        NewKeyword = 3020,        
         /// <summary><c> object </c></summary>
-        ObjectKeyword = 3020,
+        ObjectKeyword = 3021,
         /// <summary><c> static </c></summary>
-        StaticKeyword = 3021,
+        StaticKeyword = 3022,
 
 
         //Declarations: 4000 -> 5000
@@ -209,5 +211,7 @@ namespace JiteLang.Syntax
         ElseStatement = 6004,
         /// <summary><c> while </c></summary>
         WhileStatement = 6005,
+        /// <summary><c> for </c></summary>
+        ForStatement = 6006,
     }
 }

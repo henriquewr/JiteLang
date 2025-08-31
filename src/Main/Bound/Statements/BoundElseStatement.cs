@@ -10,17 +10,14 @@ namespace JiteLang.Main.Bound.Statements
             Else = @else;
         }
 
-        public BoundStatement Else { get; set; }
-
-        public override void SetParent()
+        public BoundStatement Else
         {
-            Else.Parent = this;
-        }
-
-        public override void SetParentRecursive()
-        {
-            SetParent();
-            Else.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

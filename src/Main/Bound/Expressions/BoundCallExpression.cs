@@ -1,4 +1,5 @@
 ﻿using JiteLang.Main.Shared.Type;
+using JiteLang.Utilities;
 using System;
 using System.Collections.Generic;
 
@@ -19,34 +20,44 @@ namespace JiteLang.Main.Bound.Expressions
             } 
         }
              
-        public BoundCallExpression(BoundNode? parent, BoundExpression caller, List<BoundExpression> args) : base(parent)
+        public BoundCallExpression(BoundNode? parent, BoundExpression caller, NotifyAddList<BoundExpression> args) : base(parent)
         {
             Caller = caller;
             Args = args;
         }
 
-        public override void SetParent()
+        protected void OnAdd(BoundExpression item)
         {
-            Caller.Parent = this;
-
-            foreach (var arg in Args)
-            {
-                arg.Parent = this;
-            }
-        }
-        public override void SetParentRecursive()
-        {
-            Caller.Parent = this;
-            Caller.SetParentRecursive();
-
-            foreach (var arg in Args)
-            {
-                arg.Parent = this;
-                arg.SetParentRecursive();
-            }
+            item.Parent = this;
         }
 
-        public BoundExpression Caller { get; set; }
-        public List<BoundExpression> Args { get; set; }
+        public BoundExpression Caller
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
+        public NotifyAddList<BoundExpression> Args 
+        { 
+            get; 
+            set
+            {
+                field?.OnAdd -= OnAdd;
+                field = value;
+
+                if (field is not null)
+                {
+                    field.OnAdd += OnAdd;
+
+                    foreach (var member in Args)
+                    {
+                        OnAdd(member);
+                    }
+                }
+            }
+        }
     }
 }

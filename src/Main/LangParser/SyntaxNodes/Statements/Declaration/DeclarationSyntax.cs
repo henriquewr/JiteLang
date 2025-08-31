@@ -10,6 +10,6 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
             Position = identifier.Position;
         }
         
-        public IdentifierExpressionSyntax Identifier { get; init; }
+        public abstract IdentifierExpressionSyntax Identifier { get; set; }
     }
 }

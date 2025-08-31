@@ -14,13 +14,5 @@ namespace JiteLang.Main.Emit.Tree.Expressions
         }
 
         public ConstantValue Value { get; set; }
-
-        public override void SetParent()
-        {
-        }
-
-        public override void SetParentRecursive()
-        {
-        }
     }
 }

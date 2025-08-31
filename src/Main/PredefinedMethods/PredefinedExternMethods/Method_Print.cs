@@ -35,7 +35,7 @@ namespace JiteLang.Main.PredefinedExternMethods.PredefinedExternMethods
 
                     asmBuilder.Push(Operand.Rbp),
                     asmBuilder.Mov(Operand.Rbp, Operand.Rsp),
-                    asmBuilder.Sub(Operand.Rsp, new Operand("32")),
+                    asmBuilder.Sub(Operand.Rsp, new Operand("40")),
 
 
                     asmBuilder.Mov(Operand.Rcx, new Operand("-11")),
@@ -48,7 +48,7 @@ namespace JiteLang.Main.PredefinedExternMethods.PredefinedExternMethods
                     asmBuilder.Xor(Operand.R9, Operand.R9),
 
                     asmBuilder.Call(new Operand("WriteFile")),
-                    asmBuilder.Add(Operand.Rsp, new Operand("32")),
+                    asmBuilder.Add(Operand.Rsp, new Operand("40")),
 
                     asmBuilder.Pop(Operand.Rbp),
 

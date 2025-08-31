@@ -11,22 +11,13 @@ namespace JiteLang.Main.Bound.Statements
             ReturnValue = returnValue;
         }
 
-        public BoundExpression? ReturnValue { get; set; }
-
-        public override void SetParent()
+        public BoundExpression? ReturnValue
         {
-            if (ReturnValue is not null)
+            get;
+            set
             {
-                ReturnValue.Parent = this;
-            }
-        }
-
-        public override void SetParentRecursive()
-        {
-            if (ReturnValue is not null)
-            {
-                ReturnValue.Parent = this;
-                ReturnValue.SetParentRecursive();
+                field = value;
+                field?.Parent = this;
             }
         }
     }

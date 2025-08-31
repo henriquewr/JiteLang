@@ -14,6 +14,6 @@ namespace JiteLang.Main.LangParser.SyntaxNodes
         }
 
         public abstract SyntaxKind Kind { get; }
-        public SyntaxPosition Position { get; set; }
+        public virtual SyntaxPosition Position { get; set; }
     }
 }

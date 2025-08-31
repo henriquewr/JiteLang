@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
-using JiteLang.Syntax;
+﻿using JiteLang.Syntax;
+using JiteLang.Utilities;
+using System.Collections.Generic;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
 {
@@ -7,34 +8,45 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
     {
         public override SyntaxKind Kind => SyntaxKind.CallExpression;
 
-        public CallExpressionSyntax(ExpressionSyntax caller, List<ExpressionSyntax> args) : base()
+        public CallExpressionSyntax(ExpressionSyntax caller, IEnumerable<ExpressionSyntax> args) : base()
         {
             Caller = caller;
-            Args = args;
+            Args = new(args);
             Position = caller.Position;
         }
 
-        public ExpressionSyntax Caller { get; set; }
-        public List<ExpressionSyntax> Args { get; set; }
-
-        public override void SetParent()
+        public ExpressionSyntax Caller
         {
-            Caller.Parent = this;
-
-            foreach (var arg in Args)
+            get;
+            set
             {
-                arg.Parent = this;
+                field = value;
+                field?.Parent = this;
             }
         }
-        public override void SetParentRecursive()
-        {
-            Caller.Parent = this;
-            Caller.SetParentRecursive();
 
-            foreach (var arg in Args)
+        protected void OnAdd(ExpressionSyntax item)
+        {
+            item.Parent = this;
+        }
+
+        public NotifyAddList<ExpressionSyntax> Args
+        {
+            get;
+            set
             {
-                arg.Parent = this;
-                arg.SetParentRecursive();
+                field?.OnAdd -= OnAdd;
+                field = value;
+
+                if (field is not null)
+                {
+                    field.OnAdd += OnAdd;
+
+                    foreach (var member in Args)
+                    {
+                        OnAdd(member);
+                    }
+                }
             }
         }
     }

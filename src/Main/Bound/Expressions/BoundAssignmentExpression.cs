@@ -26,22 +26,26 @@ namespace JiteLang.Main.Bound.Expressions
             Left = left;
         }
 
-        public override void SetParent()
+        public BoundExpression Left
         {
-            Right.Parent = this;
-            Left.Parent = this;
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
 
-        public override void SetParentRecursive()
-        {
-            SetParent();
-
-            Right.SetParentRecursive();
-            Left.SetParentRecursive();
-        }
-
-        public BoundExpression Left { get; set; }
         public BoundKind Operator { get; set; }
-        public BoundExpression Right { get; set; }
+
+        public BoundExpression Right
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
     }
 }

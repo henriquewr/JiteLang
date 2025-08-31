@@ -11,30 +11,21 @@ namespace JiteLang.Main.Emit.Tree.Statements
             ReturnValue = returnValue;
         }
 
-        public EmitExpression? ReturnValue { get; set; }
+        public EmitExpression? ReturnValue
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
 
         public EmitMethodDeclaration GetMethod()
         {
             var method = Parent!.GetFirstOrDefaultOfType<EmitMethodDeclaration>()!;
 
             return method;
-        }
-
-        public override void SetParent()
-        {
-            if (ReturnValue is not null)
-            {
-                ReturnValue.Parent = this;
-            }
-        }
-
-        public override void SetParentRecursive()
-        {
-            if (ReturnValue is not null)
-            {
-                ReturnValue.Parent = this;
-                ReturnValue.SetParentRecursive();
-            }
         }
     }
 }

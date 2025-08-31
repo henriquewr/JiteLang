@@ -15,17 +15,14 @@ namespace JiteLang.Main.Emit.Tree.Expressions
             Initializer = initializer;
         }
 
-        public EmitBlockStatement<EmitNode, CodeLocal> Initializer { get; set; }
-
-        public override void SetParent()
+        public EmitBlockStatement<EmitNode, CodeLocal> Initializer
         {
-            Initializer.Parent = this;
-        }
-
-        public override void SetParentRecursive()
-        {
-            Initializer.Parent = this;
-            Initializer.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
     }
 }

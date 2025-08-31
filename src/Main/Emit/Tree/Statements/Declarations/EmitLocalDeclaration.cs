@@ -14,7 +14,15 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
             InitialValue = initialValue;
         }
 
-        public EmitExpression? InitialValue { get; set; }
+        public EmitExpression? InitialValue
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
 
         public CodeLocal GetVariable()
         {
@@ -53,23 +61,6 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
             }
 
             throw new UnreachableException();
-        }
-
-        public override void SetParent()
-        {
-            if (InitialValue is not null)
-            {
-                InitialValue.Parent = this;
-            }
-        }
-
-        public override void SetParentRecursive()
-        {
-            if (InitialValue is not null)
-            {
-                InitialValue.Parent = this;
-                InitialValue.SetParentRecursive();
-            }
         }
     }
 }

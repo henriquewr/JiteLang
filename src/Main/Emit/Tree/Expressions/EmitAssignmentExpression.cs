@@ -23,21 +23,23 @@ namespace JiteLang.Main.Emit.Tree.Expressions
             Right = right;
         }
 
-        public override void SetParent()
+        public EmitExpression Left
         {
-            Right.Parent = this;
-            Left.Parent = this;
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
-
-        public override void SetParentRecursive()
+        public EmitExpression Right
         {
-            SetParent();
-
-            Right.SetParentRecursive();
-            Left.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
-
-        public EmitExpression Left { get; set; }
-        public EmitExpression Right { get; set; }
     }
 }

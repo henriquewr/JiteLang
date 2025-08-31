@@ -7,24 +7,30 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.NamespaceDeclaration;
 
-        public BoundNamespaceDeclaration(BoundNode? parent, BoundIdentifierExpression identifier, BoundBlockStatement<BoundClassDeclaration, TypeVariable> body) : base(parent, identifier)
+        public BoundNamespaceDeclaration(BoundNode? parent, BoundIdentifierExpression identifier, BoundBlockStatement<BoundClassDeclaration, TypeVariable> body) : base(parent)
         {
             Body = body;
+            Identifier = identifier;
         }
 
-        public override void SetParent()
+        public BoundBlockStatement<BoundClassDeclaration, TypeVariable> Body
         {
-            Body.Parent = this;
-            Identifier.Parent = this;
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
 
-        public override void SetParentRecursive()
+        public override BoundIdentifierExpression Identifier
         {
-            SetParent();
-            Body.SetParentRecursive();
-            Identifier.SetParentRecursive();
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
-
-        public BoundBlockStatement<BoundClassDeclaration, TypeVariable> Body { get; set; }
     }
 }

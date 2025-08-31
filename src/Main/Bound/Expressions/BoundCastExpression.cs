@@ -12,17 +12,14 @@ namespace JiteLang.Main.Bound.Expressions
             Type = toType;
         }
 
-        public override void SetParent()
+        public BoundExpression Value
         {
-            Value.Parent = this;
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
         }
-
-        public override void SetParentRecursive()
-        {
-            Value.Parent = this;
-            Value.SetParentRecursive();
-        }
-
-        public BoundExpression Value { get; set; }
     }
 }

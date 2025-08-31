@@ -2,6 +2,8 @@
 using JiteLang.Main.Shared.Modifiers;
 using JiteLang.Main.Shared.Type;
 using JiteLang.Main.Visitor.Type.Scope;
+using JiteLang.Utilities;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace JiteLang.Main.Bound.Statements.Declaration
@@ -10,9 +12,10 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.ClassDeclaration;
 
-        public BoundClassDeclaration(BoundNode? parent, ClassTypeSymbol type, BoundIdentifierExpression identifier, BoundBlockStatement<BoundNode, TypeField> body) : base(parent, identifier)
+        public BoundClassDeclaration(BoundNode? parent, ClassTypeSymbol type, BoundIdentifierExpression identifier, BoundBlockStatement<BoundNode, TypeField> body) : base(parent)
         {
             Body = body;
+            Identifier = identifier;
             //Constructors = new();
             Type = type;
         }
@@ -29,7 +32,7 @@ namespace JiteLang.Main.Bound.Statements.Declaration
                 new BoundIdentifierExpression(null, $"init_{GetFullName('_')}", delegateTypeSymbol),
                 Type,
                 null!,
-                new(1)
+                new NotifyAddList<BoundParameterDeclaration>(1)
                 {
                     new BoundParameterDeclaration
                     (
@@ -52,20 +55,6 @@ namespace JiteLang.Main.Bound.Statements.Declaration
             initializer.Body.Members.Add(returnStmt);
 
             Body.Members.Add(initializer);
-            Body.SetParentRecursive();
-        }
-
-        public override void SetParent()
-        {
-            Body.Parent = this;
-            Identifier.Parent = this;
-        }
-
-        public override void SetParentRecursive()
-        {
-            SetParent();
-            Body.SetParentRecursive();
-            Identifier.SetParentRecursive();
         }
 
         public ClassTypeSymbol Type { get; set; }
@@ -74,7 +63,26 @@ namespace JiteLang.Main.Bound.Statements.Declaration
 
         //public List<BoundMethodDeclaration> Constructors { get; set; }
 
-        public BoundBlockStatement<BoundNode, TypeField> Body { get; set; }
+        public BoundBlockStatement<BoundNode, TypeField> Body
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
+
+        public override BoundIdentifierExpression Identifier
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
+
 
         public string GetFullName(char separator = '.')
         {

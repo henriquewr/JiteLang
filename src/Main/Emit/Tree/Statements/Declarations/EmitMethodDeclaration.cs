@@ -1,6 +1,7 @@
 ﻿using JiteLang.Main.Emit.AsmBuilder.Scope;
 using JiteLang.Main.Shared.Modifiers;
 using JiteLang.Main.Shared.Type;
+using JiteLang.Utilities;
 using System.Collections.Generic;
 
 namespace JiteLang.Main.Emit.Tree.Statements.Declarations
@@ -19,48 +20,73 @@ namespace JiteLang.Main.Emit.Tree.Statements.Declarations
 
         public const int UpperStackInitialPos = 8; //skip return address
 
-        public EmitLabelStatement Label { get; set; }
-        public EmitLabelStatement LabelExit { get; set; }
+        public EmitLabelStatement Label
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
+        public EmitLabelStatement LabelExit
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+            }
+        }
 
         public int StackAllocatedBytes { get; set; }
         public int UpperStackPosition { get; set; } = UpperStackInitialPos;
-        public EmitBlockStatement<EmitNode, CodeLocal> Body { get; set; }
-        public List<EmitParameterDeclaration> Params { get; set; }
+        public EmitBlockStatement<EmitNode, CodeLocal> Body
+        {
+            get;
+            set
+            {
+                field = value;
+                field?.Parent = this;
+
+                if (Params is not null)
+                {
+                    foreach (var param in Params)
+                    {
+                        OnAdd(param);
+                    }
+                }
+            }
+        }
+
+        protected void OnAdd(EmitParameterDeclaration item)
+        {
+            item.Parent = Body;
+        }
+
+        public NotifyAddList<EmitParameterDeclaration> Params
+        {
+            get;
+            set
+            {
+                field?.OnAdd -= OnAdd;
+                field = value;
+
+                if (field is not null)
+                {
+                    field.OnAdd += OnAdd;
+
+                    foreach (var member in Params)
+                    {
+                        OnAdd(member);
+                    }
+                }
+            }
+        }
+
         public Modifier Modifiers { get; set; }
         public AccessModifier AccessModifiers { get; set; }
         public bool IsInitializer { get; set; }
         public DelegateTypeSymbol Type { get; set; }
-
-        public override void SetParent()
-        {
-            Body.Parent = this;
-
-            Label.Parent = this;
-
-            LabelExit.Parent = this;
-
-            foreach (var param in Params)
-            {
-                param.Parent = Body;
-            }
-        }
-
-        public override void SetParentRecursive()
-        {
-            Body.Parent = this;
-            Body.SetParentRecursive();
-
-            Label.Parent = this;
-            Label.SetParentRecursive();
-
-            LabelExit.Parent = this;
-            LabelExit.SetParentRecursive();
-
-            foreach (var param in Params)
-            {
-                param.Parent = Body;
-                param.Parent.SetParentRecursive();
-            }
-        }
     }
 }

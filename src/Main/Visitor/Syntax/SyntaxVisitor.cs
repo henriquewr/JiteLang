@@ -67,7 +67,7 @@ namespace JiteLang.Main.Visitor.Syntax
                 }
             }
 
-            classDeclaration.Body.Members = newNodes;
+            classDeclaration.Body.Members = new(newNodes);
 
             return classDeclaration;
         }
@@ -81,7 +81,7 @@ namespace JiteLang.Main.Visitor.Syntax
             {
                 newParameters.Add(VisitMethodParameter(item, newScope));
             }
-            methodDeclarationSyntax.Params = newParameters;
+            methodDeclarationSyntax.Params = new(newParameters);
 
             var newNodes = new List<SyntaxNode>();
             foreach (var item in methodDeclarationSyntax.Body.Members)
@@ -104,7 +104,7 @@ namespace JiteLang.Main.Visitor.Syntax
                         throw new UnreachableException();
                 }
             }
-            methodDeclarationSyntax.Body.Members = newNodes;
+            methodDeclarationSyntax.Body.Members = new(newNodes);
 
             return methodDeclarationSyntax;
         }
@@ -183,7 +183,7 @@ namespace JiteLang.Main.Visitor.Syntax
                         throw new UnreachableException();
                 }
             }
-            ifStatementSyntax.Body.Members = newNodes;
+            ifStatementSyntax.Body.Members = new(newNodes);
 
             return ifStatementSyntax;
         }

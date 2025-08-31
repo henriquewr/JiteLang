@@ -13,13 +13,5 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Expressions
         }
 
         public string Text { get; set; }
-
-        public override void SetParent()
-        {
-        }
-
-        public override void SetParentRecursive()
-        {
-        }
     }
 }

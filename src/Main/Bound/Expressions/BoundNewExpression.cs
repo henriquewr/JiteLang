@@ -1,4 +1,5 @@
 ﻿using JiteLang.Main.Shared.Type;
+using JiteLang.Utilities;
 using System.Collections.Generic;
 
 namespace JiteLang.Main.Bound.Expressions
@@ -7,29 +8,35 @@ namespace JiteLang.Main.Bound.Expressions
     {
         public override BoundKind Kind => BoundKind.NewExpression;
         public override TypeSymbol Type { get; set; }
-        public BoundNewExpression(BoundNode? parent, TypeSymbol type, List<BoundExpression> args) : base(parent)
+        public BoundNewExpression(BoundNode? parent, TypeSymbol type, NotifyAddList<BoundExpression> args) : base(parent)
         {
             Type = type;
             Args = args;
         }
 
-        public override void SetParent()
+        protected void OnAdd(BoundExpression item)
         {
-            foreach (var arg in Args)
-            {
-                arg.Parent = this;
-            }
+            item.Parent = this;
         }
 
-        public override void SetParentRecursive()
+        public NotifyAddList<BoundExpression> Args
         {
-            foreach (var arg in Args)
+            get;
+            set
             {
-                arg.Parent = this;
-                arg.SetParentRecursive();
+                field?.OnAdd -= OnAdd;
+                field = value;
+
+                if (field is not null)
+                {
+                    field.OnAdd += OnAdd;
+
+                    foreach (var member in Args)
+                    {
+                        OnAdd(member);
+                    }
+                }
             }
         }
-
-        public List<BoundExpression> Args { get; set; }
     }
 }
