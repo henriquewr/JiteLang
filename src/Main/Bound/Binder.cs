@@ -5,10 +5,12 @@ using JiteLang.Main.Bound.Statements.Declaration;
 using JiteLang.Main.Bound.TypeResolvers;
 using JiteLang.Main.LangParser.SyntaxNodes;
 using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
+using JiteLang.Main.LangParser.SyntaxNodes.Expressions.Naming;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 using JiteLang.Main.LangParser.SyntaxTree;
 using JiteLang.Main.LangParser.Types;
+using JiteLang.Main.LangParser.Types.Predefined;
 using JiteLang.Main.PredefinedExternMethods.PredefinedExternMethods;
 using JiteLang.Main.Shared;
 using JiteLang.Main.Shared.Modifiers;
@@ -70,7 +72,7 @@ namespace JiteLang.Main.Bound
             BoundNamespaceDeclaration boundNamespaceDeclaration = new(parent, null!, null!);
             boundNamespaceDeclaration.Body = new BoundBlockStatement<BoundClassDeclaration, TypeVariable>(boundNamespaceDeclaration, new(namespaceDeclaration.Body.Members.Count));
 
-            boundNamespaceDeclaration.Identifier = BindIdentifierExpression(namespaceDeclaration.Identifier, scope, boundNamespaceDeclaration);
+            boundNamespaceDeclaration.Name = namespaceDeclaration.NameExpression.Text;
 
             foreach (var item in namespaceDeclaration.Body.Members)
             {
@@ -85,21 +87,18 @@ namespace JiteLang.Main.Bound
             var classType = CreateType(classDeclaration);
 
             var methods = classDeclaration.Body.Members.Where(x => x.Kind == SyntaxKind.MethodDeclaration)
-                .Cast<MethodDeclarationSyntax>().ToFrozenDictionary(k => k.Identifier.Text, v => CreateMethodScope(v, scope));
+                .Cast<MethodDeclarationSyntax>().ToFrozenDictionary(k => k.NameExpression.Text, v => CreateMethodScope(v, scope));
 
             TypeScope newScope = new(scope);
-
 
             BoundClassDeclaration boundClassDeclaration = new
             (
                 parent,
                 classType,
-                null!,
                 null!
             );
             boundClassDeclaration.Body = new BoundBlockStatement<BoundNode, TypeField>(boundClassDeclaration, new(classDeclaration.Body.Members.Count));
 
-            boundClassDeclaration.Identifier = BindIdentifierExpression(classDeclaration.Identifier, newScope, boundClassDeclaration);
             boundClassDeclaration.AddInitializer();
 
             foreach (var item in classDeclaration.Body.Members)
@@ -111,7 +110,7 @@ namespace JiteLang.Main.Bound
                         break;
                     case SyntaxKind.MethodDeclaration:
                         var method = (MethodDeclarationSyntax)item;
-                        var methodScope = methods[method.Identifier.Text];
+                        var methodScope = methods[method.NameExpression.Text];
 
                         boundClassDeclaration.Body.Members.Add(BindMethodDeclaration(method, methodScope, boundClassDeclaration.Body));
                         break;
@@ -145,8 +144,8 @@ namespace JiteLang.Main.Bound
                     newScope.Variables.Add(name, new TypeLocal(paramType, name));
                 }
 
-                var methodType = DelegateTypeSymbol.Generate(methodDeclaration.Identifier.Text, ResolveType(methodDeclaration.ReturnType), paramsTypes);
-                scope.AddMethod(methodDeclaration.Identifier.Text, methodType, @params);
+                var methodType = DelegateTypeSymbol.Generate(methodDeclaration.NameExpression.Text, ResolveType(methodDeclaration.ReturnType), paramsTypes);
+                scope.AddMethod(methodDeclaration.NameExpression.Text, methodType, @params);
 
                 return newScope;
             }
@@ -158,7 +157,7 @@ namespace JiteLang.Main.Bound
 
                 var classFullName = classDeclaration.GetFullName();
 
-                var typeSymbol = new ClassTypeSymbol(classFullName, classDeclaration.Identifier.Text, new List<FieldSymbol>(), new List<MethodSymbol>());
+                var typeSymbol = new ClassTypeSymbol(classFullName, classDeclaration.NameExpression.Text, new List<FieldSymbol>(), new List<MethodSymbol>());
 
                 if (!_types.TryAdd(typeSymbol.Text, typeSymbol))
                 {
@@ -176,12 +175,12 @@ namespace JiteLang.Main.Bound
                     var returnType = ResolveType(method.ReturnType);
                     var mParams = method.Params.Select(p => ResolveType(p.Type));
 
-                    var delegateTypeSymbol = DelegateTypeSymbol.Generate(method.Identifier.Text, returnType, mParams);
+                    var delegateTypeSymbol = DelegateTypeSymbol.Generate(method.NameExpression.Text, returnType, mParams);
 
                     _types.Add(delegateTypeSymbol.FullText, delegateTypeSymbol);
 
                     typeSymbol.Methods.Add(new MethodSymbol(
-                        method.Identifier.Text,
+                        method.NameExpression.Text,
                         delegateTypeSymbol
                     ));
                 }
@@ -207,7 +206,8 @@ namespace JiteLang.Main.Bound
             method.Body = new BoundBlockStatement<BoundNode, TypeLocal>(method, new(methodDeclarationSyntax.Body.Members.Count));
             method.Params = new(methodDeclarationSyntax.Params.Select(x => BindMethodParameter(x, newScope, method.Body)));
 
-            method.Identifier = BindIdentifierExpression(methodDeclarationSyntax.Identifier, newScope, method);
+            method.Name = methodDeclarationSyntax.NameExpression.Text;
+
             (method.Modifiers, method.AccessModifiers) = ConvertModifier(methodDeclarationSyntax.Modifiers);
             var isExtern = method.Modifiers.HasFlag(Modifier.Extern);
 
@@ -234,25 +234,25 @@ namespace JiteLang.Main.Bound
 
             void CheckExternMethodDeclaration(MethodDeclarationSyntax methodDeclaration, TypeScope newScope)
             {
-                var predefinedExternMethod = PredefinedExternMethodResolver.Resolve(methodDeclaration.Identifier.Text);
+                var predefinedExternMethod = PredefinedExternMethodResolver.Resolve(methodDeclaration.NameExpression.Text);
 
                 if (predefinedExternMethod is null)
                 {
-                    AddError($"The extern method '{methodDeclaration.Identifier.Text}' does not exists", methodDeclaration.Identifier.Position);
+                    AddError($"The extern method '{methodDeclaration.NameExpression.Text}' does not exists", methodDeclaration.NameExpression.Position);
                 }
                 else
                 {
                     var isSameReturnType = returnType.IsEqualsNotError(predefinedExternMethod.ReturnType);
                     if (!isSameReturnType)
                     {
-                        AddError($"The extern method '{methodDeclaration.Identifier.Text}' must returns '{predefinedExternMethod.ReturnType.Text}'", methodDeclaration.Identifier.Position);
+                        AddError($"The extern method '{methodDeclaration.NameExpression.Text}' must returns '{predefinedExternMethod.ReturnType.Text}'", methodDeclaration.NameExpression.Position);
                     }
 
                     var paramsTypes = methodDeclaration.Params.Select(x => x.Type);
 
                     if (methodDeclaration.Params.Count != predefinedExternMethod.ParamsTypes.Count)
                     {
-                        AddError($"Expected {predefinedExternMethod.ParamsTypes.Count} parameters, but got {methodDeclaration.Params.Count}", methodDeclaration.Identifier.Position);
+                        AddError($"Expected {predefinedExternMethod.ParamsTypes.Count} parameters, but got {methodDeclaration.Params.Count}", methodDeclaration.NameExpression.Position);
                     }
                     else
                     {
@@ -827,20 +827,46 @@ namespace JiteLang.Main.Bound
         #endregion Expressions
         protected virtual TypeSymbol ResolveType(TypeSyntax typeSyntax)
         {
-            if (typeSyntax.IsPreDefined)
+            switch (typeSyntax)
             {
-                var predefinedTypeSymbol = PredefinedTypeSymbol.FromText(typeSyntax.Text) ?? throw new NullReferenceException();
-                return predefinedTypeSymbol;
+                case TypeNameExpressionSyntax typeMemberSyntax:
+
+                    if (typeMemberSyntax is PredefinedTypeSyntax predefinedTypeSyntax)
+                    {
+                        var predefinedTypeSymbol = PredefinedTypeSymbol.FromText(((SimpleNameExpressionSyntax)predefinedTypeSyntax.NameExpression).Text) ?? throw new NullReferenceException();
+                        return predefinedTypeSymbol;
+                    }
+
+                    if (typeMemberSyntax.NameExpression.Kind == NameKind.SimpleName)
+                    {
+                        return ResolveSimpleName((SimpleNameExpressionSyntax)typeMemberSyntax.NameExpression);
+                    }
+
+                    return ResolveQualifiedName((QualifiedNameExpressionSyntax)typeMemberSyntax.NameExpression);
+
+                default:
+
+                    return ErrorTypeSymbol.Instance;
             }
 
-            if (_types.TryGetValue(typeSyntax.Text, out var typeSymbol))
+            TypeSymbol ResolveSimpleName(SimpleNameExpressionSyntax simpleNameExpressionSyntax)
             {
-                return typeSymbol;
+                if (_types.TryGetValue(simpleNameExpressionSyntax.Text, out var typeSymbol))
+                {
+                    return typeSymbol;
+                }
+
+                return ErrorTypeSymbol.Instance;
             }
 
-            typeSymbol = _types.First(x => x.Value.Text == typeSyntax.Text).Value;
+            TypeSymbol ResolveQualifiedName(QualifiedNameExpressionSyntax qualifiedNameExpressionSyntax)
+            {
+                var fullName = qualifiedNameExpressionSyntax.GetFullName();
 
-            return typeSymbol;
+                var singleValidType = _types.Single(x => x.Value.FullText.EndsWith(fullName));
+
+                return singleValidType.Value;
+            }
         }
 
         protected virtual BoundNode BindDefaultBlock(SyntaxNode item, TypeScope scope, BoundNode parent)

@@ -7,9 +7,9 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.ParameterDeclaration;
 
-        public BoundParameterDeclaration(BoundNode? parent, BoundIdentifierExpression identifierExpression, TypeSymbol type) : base(parent, type)
+        public BoundParameterDeclaration(BoundNode? parent, BoundIdentifierExpression identifier, TypeSymbol type) : base(parent, identifier, type)
         {
-            Identifier = identifierExpression;
+            Identifier = identifier;
         }
 
         public override BoundIdentifierExpression Identifier

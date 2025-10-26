@@ -7,7 +7,7 @@ namespace JiteLang.Main.Bound.Statements.Declaration
     {
         public override BoundKind Kind => BoundKind.LocalDeclaration;
 
-        public BoundLocalDeclaration(BoundNode? parent, BoundIdentifierExpression identifier, TypeSymbol type, BoundExpression? initialValue = null) : base(parent, type)
+        public BoundLocalDeclaration(BoundNode? parent, BoundIdentifierExpression identifier, TypeSymbol type, BoundExpression? initialValue = null) : base(parent, identifier, type)
         {
             InitialValue = initialValue;
             Identifier = identifier;

@@ -2,15 +2,10 @@
 
 namespace JiteLang.Main.LangParser.Types
 {
-    internal class TypeSyntax
+    internal abstract class TypeSyntax
     {
-        public TypeSyntax(SyntaxToken token)
+        public TypeSyntax()
         {
-            Token = token;
         }
-
-        public virtual bool IsPreDefined => false;
-        public string Text => Token.Text;
-        public SyntaxToken Token { get; set; }
     }
 }

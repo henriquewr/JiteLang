@@ -1,16 +1,15 @@
-﻿using JiteLang.Main.Bound.Expressions;
-using JiteLang.Main.Visitor.Type.Scope;
+﻿using JiteLang.Main.Visitor.Type.Scope;
 
 namespace JiteLang.Main.Bound.Statements.Declaration
 {
-    internal class BoundNamespaceDeclaration : BoundDeclaration
+    internal class BoundNamespaceDeclaration : BoundStatement
     {
         public override BoundKind Kind => BoundKind.NamespaceDeclaration;
 
-        public BoundNamespaceDeclaration(BoundNode? parent, BoundIdentifierExpression identifier, BoundBlockStatement<BoundClassDeclaration, TypeVariable> body) : base(parent)
+        public BoundNamespaceDeclaration(BoundNode? parent, string name, BoundBlockStatement<BoundClassDeclaration, TypeVariable> body) : base(parent)
         {
             Body = body;
-            Identifier = identifier;
+            Name = name;
         }
 
         public BoundBlockStatement<BoundClassDeclaration, TypeVariable> Body
@@ -23,14 +22,6 @@ namespace JiteLang.Main.Bound.Statements.Declaration
             }
         }
 
-        public override BoundIdentifierExpression Identifier
-        {
-            get;
-            set
-            {
-                field = value;
-                field?.Parent = this;
-            }
-        }
+        public string Name { get; set; }
     }
 }

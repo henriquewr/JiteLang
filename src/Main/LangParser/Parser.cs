@@ -6,10 +6,10 @@ using System.Runtime.CompilerServices;
 using JiteLang.Main.LangLexer.Token;
 using JiteLang.Main.LangParser.SyntaxNodes;
 using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
+using JiteLang.Main.LangParser.SyntaxNodes.Expressions.Naming;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 using JiteLang.Main.LangParser.SyntaxTree;
-using JiteLang.Main.LangParser.Types;
 using JiteLang.Main.Shared;
 using JiteLang.Syntax;
 using JiteLang.Utilities;
@@ -188,7 +188,7 @@ namespace JiteLang.Main.LangParser
 
             var body = ParseBlockStatement<ClassDeclarationSyntax>(ParseNamespaceMembers);
 
-            NamespaceDeclarationSyntax parsed = new(SyntaxFactory.Identifier(namespaceIdentifier), body);
+            NamespaceDeclarationSyntax parsed = new(SyntaxFactory.NameExpression(namespaceIdentifier), body);
 
             return parsed;
 
@@ -211,7 +211,7 @@ namespace JiteLang.Main.LangParser
 
             var classBody = ParseBlockStatement(ParseClassMembers);
 
-            ClassDeclarationSyntax parsed = new(SyntaxFactory.Identifier(classIdentifier), classBody);
+            ClassDeclarationSyntax parsed = new(SyntaxFactory.NameExpression(classIdentifier), classBody);
 
             return parsed;
 
@@ -270,7 +270,7 @@ namespace JiteLang.Main.LangParser
                 var variable = ParseVariableDeclaration();
                 Expect(SyntaxKind.SemiColon, "Expected semicolon");
 
-                var fieldDeclaration = new FieldDeclarationSyntax(modifiers, SyntaxFactory.Identifier(variable.IdentifierToken), SyntaxFactory.Type(variable.TypeToken), variable.InitialValue);
+                var fieldDeclaration = new FieldDeclarationSyntax(modifiers, SyntaxFactory.Identifier(variable.IdentifierToken), SyntaxFactory.Type(variable.Type), variable.InitialValue);
 
                 return fieldDeclaration;
             }
@@ -282,7 +282,7 @@ namespace JiteLang.Main.LangParser
             Expect(SyntaxKind.IdentifierToken, out var methodIdentifier, "Expected identifier name");
 
             var returnTypeSyntax = SyntaxFactory.Type(returnType);
-            var identifier = SyntaxFactory.Identifier(methodIdentifier);
+            var methodName = SyntaxFactory.NameExpression(methodIdentifier);
 
             var methodParams = ParseMethodParams();
 
@@ -300,7 +300,7 @@ namespace JiteLang.Main.LangParser
                 methodBody = ParseBlockStatement<SyntaxNode>(ParseDefaultMembers);
             }
 
-            MethodDeclarationSyntax methodDeclaration = new(identifier, returnTypeSyntax, methodBody, methodParams, modifiers);
+            MethodDeclarationSyntax methodDeclaration = new(methodName, returnTypeSyntax, methodBody, methodParams, modifiers);
 
             return methodDeclaration;
         }
@@ -457,18 +457,18 @@ namespace JiteLang.Main.LangParser
         {
             var variable = ParseVariableDeclaration();
 
-            var localDeclaration = new LocalDeclarationSyntax(SyntaxFactory.Identifier(variable.IdentifierToken), SyntaxFactory.Type(variable.TypeToken), variable.InitialValue);
+            var localDeclaration = new LocalDeclarationSyntax(SyntaxFactory.Identifier(variable.IdentifierToken), SyntaxFactory.Type(variable.Type), variable.InitialValue);
 
             return localDeclaration;
         }
 
-        private (TokenInfo IdentifierToken, TokenInfo TypeToken, ExpressionSyntax? InitialValue) ParseVariableDeclaration()
+        private (TokenInfo IdentifierToken, NameExpressionSyntax Type, ExpressionSyntax? InitialValue) ParseVariableDeclaration()
         {
-            _tokens.Advance(out var token);
+            var typeExpr = ParseSimpleNameIdentifierOrQualifiedNameExpression();
 
             Expect(SyntaxKind.IdentifierToken, out var identifier, "Expected identifier name");
 
-            (TokenInfo IdentifierToken, TokenInfo TypeToken, ExpressionSyntax? InitialValue) result = (identifier, token, null);
+            (TokenInfo IdentifierToken, NameExpressionSyntax Type, ExpressionSyntax? InitialValue) result = (identifier, typeExpr, null);
 
             if (_tokens.Current.Kind == SyntaxKind.SemiColon)
             {
@@ -512,13 +512,19 @@ namespace JiteLang.Main.LangParser
                        */
 
                     var (lastToken, position) = PeekWhile(token => token.Kind == SyntaxKind.DotToken || token.Kind == SyntaxKind.IdentifierToken);
-
                     if (lastToken.Kind == SyntaxKind.OpenParenToken)
                     {
+                        //Identitfier.Identifier(
                         return ParseCallExpression();
+                    }
+                    else if (_tokens.Array[_tokens.Position + position - 2].Kind == SyntaxKind.IdentifierToken && _tokens.Array[_tokens.Position + position - 3].Kind == SyntaxKind.IdentifierToken)
+                    {
+                        //Identitfier.Identifier VariableName
+                        return ParseLocalDeclaration();
                     }
                     else if (SyntaxFacts.IsAssignmentOperator(lastToken.Kind))
                     {
+                        //Identitfier.Identifier =
                         return ParseAssignmentExpr();
                     }
 
@@ -781,15 +787,15 @@ namespace JiteLang.Main.LangParser
 
         private NewExpressionSyntax ParseNewExpr()
         {
-            _tokens.Advance(out var typeToken);
+            var typeExpr = ParseSimpleNameIdentifierOrQualifiedNameExpression();
 
-            var type = SyntaxFactory.Type(typeToken);
+            var type = SyntaxFactory.Type(typeExpr);
 
             Expect(SyntaxKind.OpenParenToken, "Expected '('");
 
             var args = ParseArgs();
             var newExpr = new NewExpressionSyntax(type, args);
-            newExpr.Position = typeToken.Position;
+            newExpr.Position = typeExpr.Position;
 
             Expect(SyntaxKind.CloseParenToken, "Expected ')'");
 
@@ -856,6 +862,27 @@ namespace JiteLang.Main.LangParser
             }
 
             return identifier;
+        }
+
+        private NameExpressionSyntax ParseSimpleNameIdentifierOrQualifiedNameExpression()
+        {
+            _tokens.Advance(out var currentToken);
+
+            NameExpressionSyntax leftExpr = SyntaxFactory.NameExpression(currentToken);
+
+            while (_tokens.Current.Kind == SyntaxKind.DotToken)
+            {
+                // Member Expression
+
+                _tokens.Advance();
+                Expect(SyntaxKind.IdentifierToken, out var identifierToken, "Expected identifier");
+
+                var rightExpr = SyntaxFactory.NameExpression(identifierToken);
+
+                leftExpr = new QualifiedNameExpressionSyntax(leftExpr, rightExpr);
+            }
+
+            return leftExpr;
         }
 
         #endregion Expressions

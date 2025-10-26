@@ -1,4 +1,4 @@
-﻿using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
+﻿using JiteLang.Main.LangParser.SyntaxNodes.Expressions.Naming;
 using JiteLang.Main.LangParser.Types;
 using JiteLang.Syntax;
 using JiteLang.Utilities;
@@ -6,17 +6,17 @@ using System.Collections.Generic;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
 {
-    internal class MethodDeclarationSyntax : DeclarationSyntax
+    internal class MethodDeclarationSyntax : StatementSyntax
     {
         public override SyntaxKind Kind => SyntaxKind.MethodDeclaration;
 
-        public MethodDeclarationSyntax(IdentifierExpressionSyntax identifier, 
+        public MethodDeclarationSyntax(SimpleNameExpressionSyntax nameExpression, 
             TypeSyntax returnType, 
             BlockStatement<SyntaxNode> body, 
             IEnumerable<ParameterDeclarationSyntax> @params, 
-            List<SyntaxToken> modifiers) : base(identifier)
+            List<SyntaxToken> modifiers) : base()
         {
-            Identifier = identifier;
+            NameExpression = nameExpression;
             ReturnType = returnType;
             Modifiers = modifiers;
             Params = new(@params);
@@ -69,14 +69,6 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
             }
         }
 
-        public override IdentifierExpressionSyntax Identifier
-        {
-            get;
-            set
-            {
-                field = value;
-                field?.Parent = this;
-            }
-        }
+        public SimpleNameExpressionSyntax NameExpression { get; set; }
     }
 }

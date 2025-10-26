@@ -3,33 +3,31 @@ using JiteLang.Main.Shared.Modifiers;
 using JiteLang.Main.Shared.Type;
 using JiteLang.Main.Visitor.Type.Scope;
 using JiteLang.Utilities;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace JiteLang.Main.Bound.Statements.Declaration
 {
-    internal class BoundClassDeclaration : BoundDeclaration
+    internal class BoundClassDeclaration : BoundStatement
     {
         public override BoundKind Kind => BoundKind.ClassDeclaration;
 
-        public BoundClassDeclaration(BoundNode? parent, ClassTypeSymbol type, BoundIdentifierExpression identifier, BoundBlockStatement<BoundNode, TypeField> body) : base(parent)
+        public BoundClassDeclaration(BoundNode? parent, ClassTypeSymbol type, BoundBlockStatement<BoundNode, TypeField> body) : base(parent)
         {
             Body = body;
-            Identifier = identifier;
             //Constructors = new();
             Type = type;
         }
+
+        public string Name => Type.Text;
 
         public void AddInitializer()
         {
             var initializerName = $"init_{GetFullName('_')}";
 
-            var delegateTypeSymbol = DelegateTypeSymbol.Generate(initializerName, Type, Type);
-
             BoundMethodDeclaration initializer = new
             (
                 Body,
-                new BoundIdentifierExpression(null, $"init_{GetFullName('_')}", delegateTypeSymbol),
+                initializerName,
                 Type,
                 null!,
                 new NotifyAddList<BoundParameterDeclaration>(1)
@@ -73,21 +71,10 @@ namespace JiteLang.Main.Bound.Statements.Declaration
             }
         }
 
-        public override BoundIdentifierExpression Identifier
-        {
-            get;
-            set
-            {
-                field = value;
-                field?.Parent = this;
-            }
-        }
-
-
         public string GetFullName(char separator = '.')
         {
             var parentNamespace = (BoundNamespaceDeclaration)Parent.Parent!;
-            return $"{parentNamespace.Identifier.Text}{separator}{Identifier.Text}";
+            return $"{parentNamespace.Name}{separator}{Type.Text}";
         }
     }
 }

@@ -1,15 +1,15 @@
-﻿using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
+﻿using JiteLang.Main.LangParser.SyntaxNodes.Expressions.Naming;
 using JiteLang.Syntax;
 
 namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
 {
-    internal class NamespaceDeclarationSyntax : DeclarationSyntax
+    internal class NamespaceDeclarationSyntax : StatementSyntax
     {
         public override SyntaxKind Kind => SyntaxKind.NamespaceDeclaration;
 
-        public NamespaceDeclarationSyntax(IdentifierExpressionSyntax identifier, BlockStatement<ClassDeclarationSyntax> body) : base(identifier)
+        public NamespaceDeclarationSyntax(SimpleNameExpressionSyntax nameExpression, BlockStatement<ClassDeclarationSyntax> body) : base()
         {
-            Identifier = identifier;
+            NameExpression = nameExpression;
             Body = body;
         }
 
@@ -23,14 +23,6 @@ namespace JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration
             }
         }
 
-        public override IdentifierExpressionSyntax Identifier
-        {
-            get;
-            set
-            {
-                field = value;
-                field?.Parent = this;
-            }
-        }
+        public SimpleNameExpressionSyntax NameExpression { get; set; }
     }
 }

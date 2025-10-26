@@ -1,29 +1,26 @@
-﻿using JiteLang.Main.Bound.Expressions;
-using JiteLang.Main.Shared.Modifiers;
+﻿using JiteLang.Main.Shared.Modifiers;
 using JiteLang.Main.Shared.Type;
 using JiteLang.Main.Shared.Type.Members.Method;
 using JiteLang.Main.Visitor.Type.Scope;
-using JiteLang.Syntax;
 using JiteLang.Utilities;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace JiteLang.Main.Bound.Statements.Declaration
 {
-    internal class BoundMethodDeclaration : BoundDeclaration
+    internal class BoundMethodDeclaration : BoundStatement
     {
         public override BoundKind Kind => BoundKind.MethodDeclaration;
 
         public BoundMethodDeclaration(
             BoundNode? parent,
-            BoundIdentifierExpression identifierExpression,
+            string name,
             TypeSymbol returnType,
             BoundBlockStatement<BoundNode, TypeLocal> body,
             NotifyAddList<BoundParameterDeclaration> @params
             ) : base(parent)
         {
             Body = body;
-            Identifier = identifierExpression;
+            Name = name;
             Params = @params;
             ReturnType = returnType;
         }
@@ -74,29 +71,21 @@ namespace JiteLang.Main.Bound.Statements.Declaration
             }
         }
 
-        public override BoundIdentifierExpression Identifier
-        {
-            get;
-            set
-            {
-                field = value;
-                field?.Parent = this;
-            }
-        }
+        public string Name { get; set; }
 
         public TypeSymbol ReturnType { get; set; }
         public bool IsInitializer { get; set; }
 
         public DelegateTypeSymbol GetDelegateType()
         {
-            var delegateType = DelegateTypeSymbol.Generate(Identifier.Text, ReturnType, Params.Select(x => x.Type));
+            var delegateType = DelegateTypeSymbol.Generate(Name, ReturnType, Params.Select(x => x.Type));
             return delegateType;
         }
 
         public MethodSymbol GetSymbol()
         {
             var delegateType = GetDelegateType();
-            var methodSymbol = new MethodSymbol(Identifier.Text, delegateType);
+            var methodSymbol = new MethodSymbol(Name, delegateType);
             return methodSymbol;
         }
     }

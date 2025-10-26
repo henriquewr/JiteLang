@@ -1,12 +1,10 @@
-﻿using JiteLang.Main.LangParser.SyntaxNodes;
+﻿using JiteLang.Main.LangParser.SyntaxNodes.Expressions.Naming;
 
 namespace JiteLang.Main.LangParser.Types.Predefined
 {
-    internal class PredefinedTypeSyntax : TypeSyntax
+    internal class PredefinedTypeSyntax : TypeNameExpressionSyntax
     {
-        public override bool IsPreDefined => true;
-
-        public PredefinedTypeSyntax(SyntaxToken keyword) : base(keyword)
+        public PredefinedTypeSyntax(NameExpressionSyntax nameExpression) : base(nameExpression)
         {
         }
     }

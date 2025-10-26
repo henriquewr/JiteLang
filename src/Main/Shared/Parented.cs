@@ -1,5 +1,4 @@
-﻿
-namespace JiteLang.Main.Shared
+﻿namespace JiteLang.Main.Shared
 {
     internal abstract class Parented<TParent> where TParent : Parented<TParent>
     {
@@ -12,6 +11,7 @@ namespace JiteLang.Main.Shared
             Parent = parent;
         }
 
+        [Newtonsoft.Json.JsonIgnore]
         public TParent? Parent { get; set; }
 
         public virtual T? GetFirstOrDefaultOfType<T>()

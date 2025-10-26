@@ -8,7 +8,6 @@ using JiteLang.Main.Emit.Tree.Expressions;
 using JiteLang.Main.Emit.Tree.Statements;
 using JiteLang.Main.Emit.Tree.Statements.Declarations;
 using JiteLang.Main.Emit.Tree.Utils;
-using JiteLang.Main.LangParser.SyntaxNodes.Statements;
 using JiteLang.Main.PredefinedMethods;
 using JiteLang.Main.Shared;
 using JiteLang.Main.Shared.Modifiers;
@@ -28,7 +27,7 @@ namespace JiteLang.Main.Emit.Tree
         #region Declarations
         public EmitNamespaceDeclaration VisitNamespaceDeclaration(BoundNamespaceDeclaration root, EmitNode? parent)
         {
-            EmitNamespaceDeclaration emitNamespace = new(parent, root.Identifier.Text, null!);
+            EmitNamespaceDeclaration emitNamespace = new(parent, root.Name, null!);
             emitNamespace.Body = new EmitBlockStatement<EmitClassDeclaration, CodeVariable>(emitNamespace, new(root.Body.Members.Count));
 
             foreach (var classDeclaration in root.Body.Members)
@@ -41,7 +40,7 @@ namespace JiteLang.Main.Emit.Tree
 
         public EmitClassDeclaration VisitClassDeclaration(BoundClassDeclaration classDeclaration, EmitNode parent)
         {
-            EmitClassDeclaration emitClass = new(parent, classDeclaration.Type, classDeclaration.Identifier.Text, null!);
+            EmitClassDeclaration emitClass = new(parent, classDeclaration.Type, classDeclaration.Name, null!);
             emitClass.Body = new EmitBlockStatement<EmitNode, CodeField>(emitClass, new(classDeclaration.Body.Members.Count));
 
             _typesDeclaration[emitClass.GetFullName()] = emitClass;
@@ -105,7 +104,7 @@ namespace JiteLang.Main.Emit.Tree
                 //return VisitExternMethodDeclaration(methodDeclaration, newScope);
             }
 
-            EmitMethodDeclaration emitMethodDeclaration = new(parent, methodDeclaration.Identifier.Text, null!, methodDeclaration.GetDelegateType())
+            EmitMethodDeclaration emitMethodDeclaration = new(parent, methodDeclaration.Name, null!, methodDeclaration.GetDelegateType())
             {
                 IsInitializer = methodDeclaration.IsInitializer,
                 Modifiers = methodDeclaration.Modifiers,

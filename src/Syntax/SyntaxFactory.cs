@@ -3,6 +3,7 @@ using System.Diagnostics;
 using JiteLang.Main.LangLexer.Token;
 using JiteLang.Main.LangParser.SyntaxNodes;
 using JiteLang.Main.LangParser.SyntaxNodes.Expressions;
+using JiteLang.Main.LangParser.SyntaxNodes.Expressions.Naming;
 using JiteLang.Main.LangParser.SyntaxNodes.Statements.Declaration;
 using JiteLang.Main.LangParser.Types;
 using JiteLang.Main.LangParser.Types.Predefined;
@@ -37,10 +38,16 @@ namespace JiteLang.Syntax
             {
                 return PredefinedType(token);
             }
-            var sytaxToken = Token(token);
 
-            var typeSyntax = new TypeSyntax(sytaxToken);
+            var simpleNameExpression = new SimpleNameExpressionSyntax(token.Text, token.Position);
+
+            var typeSyntax = new TypeNameExpressionSyntax(simpleNameExpression);
             return typeSyntax;
+        }
+
+        public static TypeSyntax Type(NameExpressionSyntax expression)
+        {
+            return new TypeNameExpressionSyntax(expression);
         }
 
         public static PredefinedTypeSyntax PredefinedType(SyntaxKind keyword, SyntaxPosition position)
@@ -52,7 +59,7 @@ namespace JiteLang.Syntax
             }
            
             var token = new SyntaxToken(keyword, text, position);
-            var predefined = new PredefinedTypeSyntax(token);
+            var predefined = new PredefinedTypeSyntax(new SimpleNameExpressionSyntax(text, position));
 
             return predefined;
         }
@@ -64,6 +71,11 @@ namespace JiteLang.Syntax
             var varDeclaration = new LocalDeclarationSyntax(identifier, type);
 
             return varDeclaration;
+        }
+
+        public static SimpleNameExpressionSyntax NameExpression(in TokenInfo token)
+        {
+            return new SimpleNameExpressionSyntax(token.Text, token.Position);
         }
 
         public static IdentifierExpressionSyntax Identifier(in TokenInfo token)

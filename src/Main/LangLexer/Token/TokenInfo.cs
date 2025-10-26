@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using JiteLang.Syntax;
 
 namespace JiteLang.Main.LangLexer.Token
 {
+    [DebuggerDisplay("{Kind}, {Text}")]
     internal struct TokenInfo : IEquatable<TokenInfo>
     {
         internal SyntaxKind Kind { get; set; }
